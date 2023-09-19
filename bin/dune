@@ -1,0 +1,4 @@
+(executable
+ (public_name links_lsp)
+ (name main)
+ (libraries links_lsp))
