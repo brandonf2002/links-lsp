@@ -5,7 +5,7 @@
 (generate_opam_files true)
 
 (source
- (github brandonf2002/links-lsp)
+ (github brandonf2002/links-lsp))
 
 (authors "Author Name")
 
