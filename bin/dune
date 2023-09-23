@@ -1,4 +1,6 @@
 (executable
  (public_name links_lsp)
  (name main)
+ (flags (:standard -w -69-32-27))
+ (modes byte)
  (libraries links_lsp yojson unix))

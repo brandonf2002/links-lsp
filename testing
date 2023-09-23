@@ -1,0 +1,24 @@
+Content-Length: 389
+
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "initialize",
+  "params": {
+    "processId": 12345,
+    "rootPath": "/path/to/project",
+    "rootUri": "file:///path/to/project",
+    "capabilities": {
+      "textDocument": {
+        "synchronization": {
+          "dynamicRegistration": true
+        }
+      },
+      "workspace": {
+        "didChangeConfiguration": {
+          "dynamicRegistration": true
+        }
+      }
+    }
+  }
+}
