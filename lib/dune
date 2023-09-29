@@ -1,3 +1,4 @@
 (library
  (name links_lsp)
- (public_name links_lsp))
+ (public_name links_lsp)
+ (libraries communication_channel))
