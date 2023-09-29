@@ -19,6 +19,16 @@ type header_info = {
   content_type : string option;
 }
 
+let write_to_file content file_name =
+  let oc = open_out file_name in
+  output_string oc content;
+  close_out oc
+
+let append_to_file content file_name =
+  let oc = open_out_gen [Open_creat; Open_text; Open_append] 0o666 file_name in
+  output_string oc (content ^ "\n");
+  close_out oc
+
 exception InvalidHeader
 
 let read_line () =
@@ -27,20 +37,31 @@ let read_line () =
 let parse_header () : header_info =
   let rec aux length ctype = 
     match read_line () with
-    | Some "" -> { content_length = length; content_type = ctype }  (* Empty line indicates end of headers *)
-    | Some line ->
-      (match String.split_on_char ':' line with
-       | "Content-Length" :: value :: [] -> aux (int_of_string (String.trim value)) ctype
-       | "Content-Type" :: value :: [] -> aux length (Some (String.trim value))
-       | _ -> aux length ctype)
+    | Some line -> (match String.trim line with
+      | "" -> 
+          { content_length = length; content_type = ctype }  (* Empty line indicates end of headers *)
+      | line ->
+        (match String.split_on_char ':' line with
+         | "Content-Length" :: value :: [] -> aux (int_of_string (String.trim value)) ctype
+         | "Content-Type" :: value :: [] -> aux length (Some (String.trim value))
+         | _ -> aux length ctype));
     | None -> raise InvalidHeader
   in aux 0 None
 
 let read_message_stdio () : string =
   let header = parse_header () in
+  append_to_file "DONE" "/home/brandon/LSP_test";
   let buffer = Bytes.create header.content_length in
   really_input stdin buffer 0 header.content_length;
   Bytes.to_string buffer
+
+(* TODO Change from using printf to something a bit more efficient *)
+let write_message_stdio msg =
+  let header = {
+    content_length = String.length msg;
+    content_type = None;
+  } in
+  Printf.printf "Content-Length: %d\r\n\r\n%s" header.content_length msg
 
 let read_message ch : string =
   match ch with
@@ -48,9 +69,9 @@ let read_message ch : string =
   | Pipe f -> failwith "Not implemented"
   | Socket s -> failwith "Not implemented"
 
-let write_message ch : string =
+let write_message ch msg =
   match ch with
-  | Stdio -> failwith "Not implemented"
+  | Stdio -> write_message_stdio msg
   | Pipe f -> failwith "Not implemented"
   | Socket s -> failwith "Not implemented"
 
@@ -80,14 +101,16 @@ let specs =
 
 let () =
   Arg.parse specs (fun _ -> ()) "Usage: links_lsp [options]";
-  
+  write_to_file "Hello world\n\n" "/home/brandon/LSP_test";
+
   (match !client_pid_ref with
   | Some pid -> Printf.printf "Client Process ID: %s\n" pid
   | None -> ());
 
   describe_channel !method_ref |> print_endline;
 
-  match !method_ref with
-  | Stdio -> read_message_stdio () |> print_endline
+  (match !method_ref with
+  (* | Stdio -> read_message_stdio () |> print_endline *)
+  | Stdio -> append_to_file (read_message_stdio ()) "/home/brandon/LSP_test"
   | (Pipe s) -> failwith "Not implemented"
-  | (Socket i) -> failwith "Not implemented"
+  | (Socket i) -> failwith "Not implemented");
