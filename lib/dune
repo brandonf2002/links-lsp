@@ -1,2 +1,3 @@
 (library
- (name links_lsp))
+ (name links_lsp)
+ (public_name links_lsp))
