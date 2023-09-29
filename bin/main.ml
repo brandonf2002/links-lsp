@@ -1,5 +1,7 @@
 (* The communication_channel stuff *)
 
+open Links_lsp.Common
+
 type file = string
 type tcp_stream = int
 
@@ -19,15 +21,15 @@ type header_info = {
   content_type : string option;
 }
 
-let write_to_file content file_name =
-  let oc = open_out file_name in
-  output_string oc content;
-  close_out oc
+(* let write_to_file content file_name = *)
+(*   let oc = open_out file_name in *)
+(*   output_string oc content; *)
+(*   close_out oc *)
 
-let append_to_file content file_name =
-  let oc = open_out_gen [Open_creat; Open_text; Open_append] 0o666 file_name in
-  output_string oc (content ^ "\n");
-  close_out oc
+(* let append_to_file content file_name = *)
+(*   let oc = open_out_gen [Open_creat; Open_text; Open_append] 0o666 file_name in *)
+(*   output_string oc (content ^ "\n"); *)
+(*   close_out oc *)
 
 exception InvalidHeader
 
