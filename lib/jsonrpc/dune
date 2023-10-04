@@ -1,0 +1,5 @@
+(library
+ (name jsonrpc)
+ (public_name links_lsp.jsonrpc)
+ (libraries links_lsp yojson)
+ (modules :standard))

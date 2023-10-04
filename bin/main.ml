@@ -1,6 +1,5 @@
 open Links_lsp.Common
 open Communication_channel
-open Communication_channel.Stdio
 
 (* The Argument Parsing *) 
 
@@ -29,4 +28,5 @@ let specs =
 let () =
   Arg.parse specs (fun _ -> ()) "Usage: links_lsp [options]";
   write_to_file "Hello world\n\n" "/home/brandon/LSP_test";
-  append_to_file (Channel.read_message !method_ref) "/home/brandon/LSP_test"
+  append_to_file (Channel.read_message !method_ref) "/home/brandon/LSP_test";
+  print_endline Jsonrpc.Hello.hello
