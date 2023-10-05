@@ -1,6 +1,8 @@
 open Links_lsp.Common
 open Communication_channel
 
+(* open Jsonrpc.Types *)
+
 (* The Argument Parsing *) 
 
 let method_ref = ref Channel.Stdio

@@ -22,6 +22,8 @@ module ErrorCode : sig
   }
 end
 
+val pretty_print_error_code : ErrorCode.t -> string
+
 type jsonrpc
 type id
 type params
@@ -52,4 +54,7 @@ module Message : sig
     | Request of request
     | Notification of notification
     | Response of response
+    
+    val str_to_t : string -> t option
+    val t_to_str : t -> string
 end
