@@ -2,4 +2,5 @@
  (name jsonrpc)
  (public_name links_lsp.jsonrpc)
  (libraries links_lsp yojson)
+ (flags (:standard -w -69-32-27-34))
  (modules :standard))
