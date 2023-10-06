@@ -35,5 +35,12 @@ let _ =
   let test = Types.Message.str_to_t init_req in
   (match test with
   | Some x -> append_to_file (Types.Message.pretty_print x) "/home/brandon/LSP_test"
-  | None -> write_to_file "Error\n" "/home/brandon/LSP_test");
+  | None -> append_to_file "Error\n" "/home/brandon/LSP_test");
+
+  let test = "Hello world!" in
+  let test2 = Types.Message.str_to_t test in
+  (match test2 with
+  | Some x -> append_to_file (Types.Message.pretty_print x) "/home/brandon/LSP_test"
+  | None -> append_to_file "Error\n" "/home/brandon/LSP_test");
+  
   exit 2
