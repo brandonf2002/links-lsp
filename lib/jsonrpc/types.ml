@@ -108,44 +108,46 @@ module Message = struct
   (* val str_to_t : msg:string -> t *)
   (* TODO: This never returns None, which seems like an issue honestly *)
   let str_to_t msg = 
-    let open Yojson.Safe.Util in
-    let json = Yojson.Safe.from_string msg in
-    let jsonrpc = json |> member "jsonrpc" |> to_string in
-    (* TODO: Validate jsonrpc *)
-    let id = json |> member "id" in
-    match id with
-    | `Null ->
-      let method_name = json |> member "method" |> to_string in
-      let params = json |> member "params" in
-      (match params with
-      | `Null -> Some(Notification { jsonrpc; method_name; params = None })
-      | _ -> Some(Notification { jsonrpc; method_name; params = Some params }))
-    (* TODO: ID should be restricted to ints, strings and bools *)
-    | _ -> 
-      let method_name = json |> member "method" in
-      match method_name with
-      | `Null -> 
-        let result = json |> member "result" in
-        let result = match result with
-          | `Null -> None
-          | _ -> Some(result) in
-        let error = json |> member "error" in
-        let error = match error with
-          | `Null -> None
-          | _ -> 
-            let code = json |> member "error" |> member "code" |> to_int in
-            let message = json |> member "error" |> member "message" |> to_string in
-            Some(ErrorCode.{ code = ErrorCode.of_int code; message; data = None })
-        in
-        let id = json |> member "id" in
-        Some(Response { jsonrpc; result; error; id })
+    try
+      let open Yojson.Safe.Util in
+      let json = Yojson.Safe.from_string msg in
+      let jsonrpc = json |> member "jsonrpc" |> to_string in
+      (* TODO: Validate jsonrpc *)
+      let id = json |> member "id" in
+      match id with
+      | `Null ->
+        let method_name = json |> member "method" |> to_string in
+        let params = json |> member "params" in
+        (match params with
+        | `Null -> Some(Notification { jsonrpc; method_name; params = None })
+        | _ -> Some(Notification { jsonrpc; method_name; params = Some params }))
+      (* TODO: ID should be restricted to ints, strings and bools *)
       | _ -> 
-          let method_name = to_string method_name in
-          let params = json |> member "params" in
-          let params = match params with
+        let method_name = json |> member "method" in
+        match method_name with
+        | `Null -> 
+          let result = json |> member "result" in
+          let result = match result with
             | `Null -> None
-            | _ -> Some(params) in
-          Some (Request { jsonrpc; method_name; params; id })
+            | _ -> Some(result) in
+          let error = json |> member "error" in
+          let error = match error with
+            | `Null -> None
+            | _ -> 
+              let code = json |> member "error" |> member "code" |> to_int in
+              let message = json |> member "error" |> member "message" |> to_string in
+              Some(ErrorCode.{ code = ErrorCode.of_int code; message; data = None })
+          in
+          let id = json |> member "id" in
+          Some(Response { jsonrpc; result; error; id })
+        | _ -> 
+            let method_name = to_string method_name in
+            let params = json |> member "params" in
+            let params = match params with
+              | `Null -> None
+              | _ -> Some(params) in
+            Some (Request { jsonrpc; method_name; params; id })
+    with _ -> None
 
   (* val t_to_str : msg:t -> string *)
   let t_to_str msg : string =
