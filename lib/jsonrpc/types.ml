@@ -56,6 +56,7 @@ module ErrorCode = struct
   }
 end
 
+
 let pretty_print_error_code code =
   match code with
   | ErrorCode.ParseError -> "ParseError"
@@ -175,23 +176,27 @@ module Message = struct
     in
     Yojson.Safe.to_string json_obj
 
-  let pretty_print (msg: t) : unit =
+  let pretty_print (msg: t) : string =
     match msg with
     | Request req ->
-      Printf.printf "Request {\n  jsonrpc: %s,\n  method_name: %s,\n  params: %s,\n  id: %s\n}\n"
+      Printf.sprintf "Request {\n  jsonrpc: %s,\n  method_name: %s,\n  params: %s,\n  id: %s\n}"
         req.jsonrpc
         req.method_name
         (Option.value ~default:"None" (Option.map Yojson.Safe.to_string req.params))
         (Yojson.Safe.to_string req.id)
     | Notification notif ->
-      Printf.printf "Notification {\n  jsonrpc: %s,\n  method_name: %s,\n  params: %s\n}\n"
+      Printf.sprintf "Notification {\n  jsonrpc: %s,\n  method_name: %s,\n  params: %s\n}"
         notif.jsonrpc
         notif.method_name
         (Option.value ~default:"None" (Option.map Yojson.Safe.to_string notif.params))
     | Response res ->
-      Printf.printf "Response {\n  jsonrpc: %s,\n  result: %s,\n  error: %s,\n  id: %s\n}\n"
+      let error_str = match res.error with
+        | Some err -> pretty_print_error_code err.ErrorCode.code  (* Assuming ErrorCode.error has a field named code of type ErrorCode.t *)
+        | None -> "None"
+      in
+      Printf.sprintf "Response {\n  jsonrpc: %s,\n  result: %s,\n  error: %s,\n  id: %s\n}"
         res.jsonrpc
         (Option.value ~default:"None" (Option.map Yojson.Safe.to_string res.result))
-        (Option.value ~default:"None" (Option.map (fun e -> pretty_print_error_code e.ErrorCode.code) res.error))
+        error_str
         (Yojson.Safe.to_string res.id)
 end

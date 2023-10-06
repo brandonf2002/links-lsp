@@ -57,4 +57,5 @@ module Message : sig
     
     val str_to_t : string -> t option
     val t_to_str : t -> string
+    val pretty_print : t -> string
 end

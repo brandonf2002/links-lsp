@@ -1,7 +1,7 @@
 open Links_lsp.Common
 open Communication_channel
 
-(* open Jsonrpc.Types *)
+open Jsonrpc
 
 (* The Argument Parsing *) 
 
@@ -25,40 +25,15 @@ let specs =
     "--clientProcessId", Arg.String (fun s -> client_pid_ref := Some s), " Store the client's process ID"
   ]
 
-(* type jsonrpc = string *)
-(* type id = Yojson.Safe.t *)
-(* type params = Yojson.Safe.t *)
-(* type result = Yojson.Safe.t *)
-(* type error = { *)
-(*   code: int; *)
-(*   message: string; *)
-(*   data: Yojson.Safe.t option; *)
-(* } *)
-
-(* type request = { *)
-(*   jsonrpc: jsonrpc; *)
-(*   method_name: string; *)
-(*   params: params option; *)
-(*   id: id; *)
-(* } *)
-
-(* type response = { *)
-(*   jsonrpc: jsonrpc; *)
-(*   result: result option; *)
-(*   error: error option; *)
-(*   id: id; *)
-(* } *)
-
 (* Main *)
 
-let () =
+let _ =
   Arg.parse specs (fun _ -> ()) "Usage: links_lsp [options]";
   write_to_file "Hello world\n\n" "/home/brandon/LSP_test";
-  append_to_file (Channel.read_message !method_ref) "/home/brandon/LSP_test";
-  (* let req = { *)
-  (*   jsonrpc = "2.0"; *)
-  (*   method_name = "subtract"; *)
-  (*   params = Some (`List [`Int 42; `Int 23]); *)
-  (*   id = `Int 1; *)
-  (* } in *)
-  (* () *)
+  let init_req = (Channel.read_message !method_ref) in
+  print_endline init_req;
+  let test = Types.Message.str_to_t init_req in
+  (match test with
+  | Some x -> append_to_file (Types.Message.pretty_print x) "/home/brandon/LSP_test"
+  | None -> write_to_file "Error\n" "/home/brandon/LSP_test");
+  exit 2
