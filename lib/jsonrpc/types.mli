@@ -24,10 +24,10 @@ end
 
 val pretty_print_error_code : ErrorCode.t -> string
 
-type jsonrpc
+type jsonrpc = string
 type id
 type params
-type result
+type result = Yojson.Safe.t
 
 type request = {
   jsonrpc: jsonrpc;
