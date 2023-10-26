@@ -80,6 +80,11 @@ let _ =
 
   append_to_file (Types.Message.pretty_print request) "/home/brandon/LSP_test";
 
+  let init_req = (Channel.read_message !method_ref) in
+  let request = (Option.get (Types.Message.str_to_t init_req)) in
+
+  append_to_file (Types.Message.pretty_print request) "/home/brandon/LSP_test";
+
   (* let test = *) 
 
-  exit 0
+  exit 1
