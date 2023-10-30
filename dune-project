@@ -1,4 +1,5 @@
 (lang dune 3.10)
+(using cinaps 1.0)
 
 (name links_lsp)
 
@@ -19,7 +20,9 @@
  (name links_lsp)
  (synopsis "A short synopsis")
  (description "A longer description")
- (depends ocaml dune)
+ (depends ocaml dune
+  yojson
+  (ppx_yojson_conv_lib (>= "v0.14")))
  (tags
   (topics "to describe" your project)))
 

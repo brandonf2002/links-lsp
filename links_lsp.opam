@@ -12,6 +12,8 @@ bug-reports: "https://github.com/brandonf2002/links-lsp/issues"
 depends: [
   "ocaml"
   "dune" {>= "3.10"}
+  "yojson"
+  "ppx_yojson_conv_lib" {>= "v0.14"}
   "odoc" {with-doc}
 ]
 build: [

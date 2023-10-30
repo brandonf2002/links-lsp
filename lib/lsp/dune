@@ -2,8 +2,8 @@
 
 (library
  (name lsp)
- (public_name lsp)
- (libraries jsonrpc ppx_yojson_conv_lib uutf yojson)
+ (public_name links_lsp.lsp)
+ (libraries jsonrpc2 ppx_yojson_conv_lib uutf yojson)
  (lint
   (pps ppx_yojson_conv))
  (instrumentation
