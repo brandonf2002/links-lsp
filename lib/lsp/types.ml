@@ -5044,7 +5044,7 @@ module CallHierarchyRegistrationOptions = struct
 end
 
 module CancelParams = struct
-  type t = { id : Jsonrpc.Id.t }
+  type t = { id : Jsonrpc2.Jsonrpc.Id.t }
   [@@deriving_inline yojson] [@@yojson.allow_extra_fields]
 
   let _ = fun (_ : t) -> ()
@@ -5062,7 +5062,7 @@ module CancelParams = struct
            | "id" -> (
              match Ppx_yojson_conv_lib.( ! ) id_field with
              | Ppx_yojson_conv_lib.Option.None ->
-               let fvalue = Jsonrpc.Id.t_of_yojson _field_yojson in
+               let fvalue = Jsonrpc2.Jsonrpc.Id.t_of_yojson _field_yojson in
                id_field := Ppx_yojson_conv_lib.Option.Some fvalue
              | Ppx_yojson_conv_lib.Option.Some _ ->
                duplicates := field_name :: Ppx_yojson_conv_lib.( ! ) duplicates)
@@ -5109,7 +5109,7 @@ module CancelParams = struct
      | { id = v_id } ->
        let bnds : (string * Ppx_yojson_conv_lib.Yojson.Safe.t) list = [] in
        let bnds =
-         let arg = Jsonrpc.Id.yojson_of_t v_id in
+         let arg = Jsonrpc2.Jsonrpc.Id.yojson_of_t v_id in
          ("id", arg) :: bnds
        in
        `Assoc bnds
@@ -5119,7 +5119,7 @@ module CancelParams = struct
 
   [@@@end]
 
-  let create ~(id : Jsonrpc.Id.t) : t = { id }
+  let create ~(id : Jsonrpc2.Jsonrpc.Id.t) : t = { id }
 end
 
 module WorkspaceEditClientCapabilities = struct
@@ -16311,7 +16311,7 @@ end
 
 module Diagnostic = struct
   type t =
-    { code : Jsonrpc.Id.t Json.Nullable_option.t
+    { code : Jsonrpc2.Jsonrpc.Id.t Json.Nullable_option.t
           [@default None] [@yojson_drop_default ( = )]
     ; codeDescription : CodeDescription.t Json.Nullable_option.t
           [@default None] [@yojson_drop_default ( = )]
@@ -16355,7 +16355,7 @@ module Diagnostic = struct
              | Ppx_yojson_conv_lib.Option.None ->
                let fvalue =
                  Json.Nullable_option.t_of_yojson
-                   Jsonrpc.Id.t_of_yojson
+                   Jsonrpc2.Jsonrpc.Id.t_of_yojson
                    _field_yojson
                in
                code_field := Ppx_yojson_conv_lib.Option.Some fvalue
@@ -16608,7 +16608,7 @@ module Diagnostic = struct
          if None = v_code then bnds
          else
            let arg =
-             (Json.Nullable_option.yojson_of_t Jsonrpc.Id.yojson_of_t) v_code
+             (Json.Nullable_option.yojson_of_t Jsonrpc2.Jsonrpc.Id.yojson_of_t) v_code
            in
            let bnd = ("code", arg) in
            bnd :: bnds
@@ -16620,7 +16620,7 @@ module Diagnostic = struct
 
   [@@@end]
 
-  let create ?(code : Jsonrpc.Id.t option)
+  let create ?(code : Jsonrpc2.Jsonrpc.Id.t option)
       ?(codeDescription : CodeDescription.t option) ?(data : Json.t option)
       ~(message : string) ~(range : Range.t)
       ?(relatedInformation : DiagnosticRelatedInformation.t list option)

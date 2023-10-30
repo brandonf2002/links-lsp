@@ -17,7 +17,7 @@ type _ t =
   | CodeLensRefresh : unit t
   | SemanticTokensRefresh : unit t
   | WorkspaceDiagnosticRefresh : unit t
-  | UnknownRequest : string * Jsonrpc.Structured.t option -> Json.t t
+  | UnknownRequest : string * Jsonrpc2.Jsonrpc.Structured.t option -> Json.t t
 
 type packed = E : 'r t -> packed
 
@@ -37,7 +37,7 @@ let method_ (type a) (t : a t) =
   | UnknownRequest (r, _) -> r
 
 let params =
-  let ret x = Some (Jsonrpc.Structured.t_of_yojson x) in
+  let ret x = Some (Jsonrpc2.Jsonrpc.Structured.t_of_yojson x) in
   fun (type a) (t : a t) ->
     match t with
     | WorkspaceApplyEdit params ->
@@ -62,9 +62,9 @@ let params =
 let to_jsonrpc_request t ~id =
   let method_ = method_ t in
   let params = params t in
-  Jsonrpc.Request.create ~id ~method_ ?params ()
+  Jsonrpc2.Jsonrpc.Request.create ~id ~method_ ?params ()
 
-let of_jsonrpc (r : Jsonrpc.Request.t) : (packed, string) Result.t =
+let of_jsonrpc (r : Jsonrpc2.Jsonrpc.Request.t) : (packed, string) Result.t =
   let open Result.O in
   let parse f = Json.message_params r.params f in
   match r.method_ with

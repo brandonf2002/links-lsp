@@ -7,9 +7,9 @@ type t =
   | LogMessage of LogMessageParams.t
   | LogTrace of LogTraceParams.t
   | TelemetryNotification of Json.t
-  | CancelRequest of Jsonrpc.Id.t
+  | CancelRequest of Jsonrpc2.Jsonrpc.Id.t
   | WorkDoneProgress of Progress.t ProgressParams.t
-  | UnknownNotification of Jsonrpc.Notification.t
+  | UnknownNotification of Jsonrpc2.Jsonrpc.Notification.t
 
 let method_ = function
   | ShowMessage _ -> "window/showMessage"
@@ -38,11 +38,11 @@ let to_jsonrpc t =
   let params =
     match yojson_of_t t with
     | None -> None
-    | Some s -> Some (Jsonrpc.Structured.t_of_yojson s)
+    | Some s -> Some (Jsonrpc2.Jsonrpc.Structured.t_of_yojson s)
   in
-  { Jsonrpc.Notification.params; method_ }
+  { Jsonrpc2.Jsonrpc.Notification.params; method_ }
 
-let of_jsonrpc (r : Jsonrpc.Notification.t) =
+let of_jsonrpc (r : Jsonrpc2.Jsonrpc.Notification.t) =
   let open Result.O in
   let params = r.params in
   match r.method_ with

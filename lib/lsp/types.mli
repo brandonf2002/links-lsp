@@ -862,9 +862,9 @@ module CallHierarchyRegistrationOptions : sig
 end
 
 module CancelParams : sig
-  type t = { id : Jsonrpc.Id.t }
+  type t = { id : Jsonrpc2.Jsonrpc.Id.t }
 
-  val create : id:Jsonrpc.Id.t -> t
+  val create : id:Jsonrpc2.Jsonrpc.Id.t -> t
 
   include Json.Jsonable.S with type t := t
 end
@@ -1793,7 +1793,7 @@ end
 
 module Diagnostic : sig
   type t =
-    { code : Jsonrpc.Id.t option
+    { code : Jsonrpc2.Jsonrpc.Id.t option
     ; codeDescription : CodeDescription.t option
     ; data : Json.t option
     ; message : string
@@ -1805,7 +1805,7 @@ module Diagnostic : sig
     }
 
   val create :
-       ?code:Jsonrpc.Id.t
+       ?code:Jsonrpc2.Jsonrpc.Id.t
     -> ?codeDescription:CodeDescription.t
     -> ?data:Json.t
     -> message:string

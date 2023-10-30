@@ -25,7 +25,7 @@ end) (Chan : sig
 
   val write : output -> string list -> unit Io.t
 end) : sig
-  val read : Chan.input -> Jsonrpc.Packet.t option Io.t
+  val read : Chan.input -> Jsonrpc2.Jsonrpc.Packet.t option Io.t
 
-  val write : Chan.output -> Jsonrpc.Packet.t -> unit Io.t
+  val write : Chan.output -> Jsonrpc2.Jsonrpc.Packet.t -> unit Io.t
 end

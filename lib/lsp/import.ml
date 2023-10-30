@@ -112,7 +112,7 @@ module Json = struct
     let ( <|> ) c1 c2 json =
       match c1 json with
       | s -> s
-      | (exception Jsonrpc.Json.Of_json (_, _))
+      | (exception Jsonrpc2.Jsonrpc.Json.Of_json (_, _))
       | (exception Conv.Of_yojson_error (_, _)) -> c2 json
   end
 
@@ -232,7 +232,7 @@ module Json = struct
   end
 
   let read_json_params f v =
-    match f (Jsonrpc.Structured.yojson_of_t v) with
+    match f (Jsonrpc2.Jsonrpc.Structured.yojson_of_t v) with
     | r -> Ok r
     | exception Ppx_yojson_conv_lib.Yojson_conv.Of_yojson_error (Failure msg, _)
       -> Error msg

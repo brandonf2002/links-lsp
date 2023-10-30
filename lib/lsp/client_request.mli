@@ -98,7 +98,7 @@ type _ t =
   | WillRenameFiles : RenameFilesParams.t -> WorkspaceEdit.t option t
   | UnknownRequest :
       { meth : string
-      ; params : Jsonrpc.Structured.t option
+      ; params : Jsonrpc2.Jsonrpc.Structured.t option
       }
       -> Json.t t
 
@@ -106,15 +106,15 @@ val yojson_of_result : 'a t -> 'a -> Json.t
 
 type packed = E : 'r t -> packed
 
-val of_jsonrpc : Jsonrpc.Request.t -> (packed, string) Result.t
+val of_jsonrpc : Jsonrpc2.Jsonrpc.Request.t -> (packed, string) Result.t
 
-val to_jsonrpc_request : _ t -> id:Jsonrpc.Id.t -> Jsonrpc.Request.t
+val to_jsonrpc_request : _ t -> id:Jsonrpc2.Jsonrpc.Id.t -> Jsonrpc2.Jsonrpc.Request.t
 
 val response_of_json : 'a t -> Json.t -> 'a
 
 val text_document :
      _ t
   -> (   meth:string
-      -> params:Jsonrpc.Structured.t option
+      -> params:Jsonrpc2.Jsonrpc.Structured.t option
       -> TextDocumentIdentifier.t option)
   -> TextDocumentIdentifier.t option

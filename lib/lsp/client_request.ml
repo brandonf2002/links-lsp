@@ -98,7 +98,7 @@ type _ t =
   | WillRenameFiles : RenameFilesParams.t -> WorkspaceEdit.t option t
   | UnknownRequest :
       { meth : string
-      ; params : Jsonrpc.Structured.t option
+      ; params : Jsonrpc2.Jsonrpc.Structured.t option
       }
       -> Json.t t
 
@@ -208,7 +208,7 @@ let yojson_of_result (type a) (req : a t) (result : a) =
 
 type packed = E : 'r t -> packed
 
-let of_jsonrpc (r : Jsonrpc.Request.t) =
+let of_jsonrpc (r : Jsonrpc2.Jsonrpc.Request.t) =
   let open Result.O in
   let parse f = Json.message_params r.params f in
   match r.method_ with
@@ -397,7 +397,7 @@ let method_ (type a) (t : a t) =
   | UnknownRequest { meth; _ } -> meth
 
 let params =
-  let ret x = Some (Jsonrpc.Structured.t_of_yojson x) in
+  let ret x = Some (Jsonrpc2.Jsonrpc.Structured.t_of_yojson x) in
   fun (type a) (t : a t) ->
     match t with
     | Shutdown -> None
@@ -468,7 +468,7 @@ let params =
 let to_jsonrpc_request t ~id =
   let method_ = method_ t in
   let params = params t in
-  Jsonrpc.Request.create ~id ~method_ ?params ()
+  Jsonrpc2.Jsonrpc.Request.create ~id ~method_ ?params ()
 
 let response_of_json (type a) (t : a t) (json : Json.t) : a =
   let open Json.Conv in

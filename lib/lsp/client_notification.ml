@@ -15,11 +15,11 @@ type t =
   | ChangeConfiguration of DidChangeConfigurationParams.t
   | Initialized
   | Exit
-  | CancelRequest of Jsonrpc.Id.t
+  | CancelRequest of Jsonrpc2.Jsonrpc.Id.t
   | WorkDoneProgressCancel of WorkDoneProgressCancelParams.t
   | SetTrace of SetTraceParams.t
   | WorkDoneProgress of Progress.t ProgressParams.t
-  | UnknownNotification of Jsonrpc.Notification.t
+  | UnknownNotification of Jsonrpc2.Jsonrpc.Notification.t
 
 let method_ = function
   | TextDocumentDidOpen _ -> "textDocument/didOpen"
@@ -71,7 +71,7 @@ let yojson_of_t = function
     Some ((ProgressParams.yojson_of_t Progress.yojson_of_t) params)
   | UnknownNotification n -> (n.params :> Json.t option)
 
-let of_jsonrpc (r : Jsonrpc.Notification.t) =
+let of_jsonrpc (r : Jsonrpc2.Jsonrpc.Notification.t) =
   let open Result.O in
   let params = r.params in
   match r.method_ with
@@ -148,5 +148,5 @@ let of_jsonrpc (r : Jsonrpc.Notification.t) =
 
 let to_jsonrpc t =
   let method_ = method_ t in
-  let params = yojson_of_t t |> Option.map Jsonrpc.Structured.t_of_yojson in
-  { Jsonrpc.Notification.params; method_ }
+  let params = yojson_of_t t |> Option.map Jsonrpc2.Jsonrpc.Structured.t_of_yojson in
+  { Jsonrpc2.Jsonrpc.Notification.params; method_ }

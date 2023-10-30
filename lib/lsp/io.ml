@@ -105,10 +105,10 @@ struct
       | None -> Io.raise (Error "unable to read json")
       | Some buf ->
         let json = Json.of_string buf in
-        Io.return (Some (Jsonrpc.Packet.t_of_yojson json)))
+        Io.return (Some (Jsonrpc2.Jsonrpc.Packet.t_of_yojson json)))
 
   let write chan packet =
-    let json = Jsonrpc.Packet.yojson_of_t packet in
+    let json = Jsonrpc2.Jsonrpc.Packet.yojson_of_t packet in
     let data = Json.to_string json in
     let content_length = String.length data in
     let header = Header.create ~content_length () in
