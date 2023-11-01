@@ -52,6 +52,12 @@ let add_content_length_header str =
   let header = Printf.sprintf "Content-Length: %d\r\n\r\n" content_length in
   header ^ str
 
+let handle_request (r: Jsonrpc.Types.request) = Some r
+
+let handle_notification (n: Jsonrpc.Types.notification) = Some n
+
+let handle_response (r: Jsonrpc.Types.response) = Some r
+
 let _ =
   Arg.parse specs (fun _ -> ()) "Usage: links_lsp [options]";
   write_to_file "Hello world\n\n" "/home/brandon/LSP_test";
@@ -61,7 +67,8 @@ let _ =
   append_to_file (Types.Message.pretty_print request) "/home/brandon/LSP_test";
 
   let test2 = (match request with
-  | Request r -> Some r
+  | Request r -> handle_request r
+  (* | Notification n -> handle_notification n *)
   | _ -> None) in
   let test2 = (Option.get test2) in
   let test = default_response ?result:(Some (default_json_value ())) ~id:(test2.id) () in
