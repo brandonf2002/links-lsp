@@ -4,6 +4,8 @@ open Communication_channel
 open Jsonrpc
 open Jsonrpc2.Jsonrpc
 
+open Links_ls.Links_lsp
+
 (* The Argument Parsing *) 
 
 let method_ref = ref Channel.Stdio
@@ -138,7 +140,6 @@ let initialize method_ref =
   | _ -> prerr_endline "Not initialize (Other)"
 
 let main_loop method_ref =
-
   while true do
     let msg = Yojson.Safe.from_string (Channel.read_message !method_ref) in
     let packet = Packet.t_of_yojson msg in
@@ -152,11 +153,14 @@ let main_loop method_ref =
 
 let _ =
   Arg.parse specs (fun _ -> ()) "Usage: links_lsp [options]";
-  write_to_file "Hello world\n\n" "/home/brandon/LSP_test";
 
-  initialize method_ref;
+  run method_ref;
 
-  main_loop method_ref;
+  (* write_to_file "Hello world\n\n" "/home/brandon/LSP_test"; *)
+
+  (* initialize method_ref; *)
+
+  (* main_loop method_ref; *)
 
   (* let init_req = (Channel.read_message !method_ref) in *)
 
