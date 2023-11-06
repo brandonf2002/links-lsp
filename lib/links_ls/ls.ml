@@ -16,8 +16,8 @@ let do_initialize channel (r : Request.t) =
     `TextDocumentSyncOptions
       (TextDocumentSyncOptions.create
          ~openClose:true
-         ~change:TextDocumentSyncKind.Incremental
-         (* ~change:TextDocumentSyncKind.Full *)
+         (* ~change:TextDocumentSyncKind.Incremental *)
+         ~change:TextDocumentSyncKind.Full
          ~willSave:false
          ~save:(`SaveOptions (SaveOptions.create ~includeText:false ()))
          ~willSaveWaitUntil:false
@@ -41,12 +41,17 @@ let rec initialize channel =
 
 let handle_notification (n : Notification.t) = 
   log_to_file n.method_;
-  match n.method_ with
-  | "exit" -> exit 0
-  | "textDocument/didOpen" -> did_open n
-  | "textDocument/didChange" -> did_change n
-  | "textDocument/didClose" -> log_to_file "didClose"
-  | _ -> prerr_endline "Not imlemented yet"
+  let open Lsp.Client_notification in
+  let x = of_jsonrpc n in
+  match x with
+  | Ok p -> (match n.method_ with
+    | "exit" -> exit 0
+    | "textDocument/didOpen" -> did_open p
+    | "textDocument/didChange" -> did_change p
+    | "textDocument/didClose" -> did_close p
+    | _ -> prerr_endline "Not imlemented yet")
+  | Error e -> "Error: " ^ e |> log_to_file;
+  ()
 
 let handle_request (r : Request.t) = 
   log_to_file r.method_;

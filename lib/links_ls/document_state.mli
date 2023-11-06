@@ -1,5 +1,5 @@
 type t = {
-  uri: string;
+  uri: Lsp.Types.DocumentUri.t;
   version: int;
   content: string;
   language_id: string;
@@ -7,8 +7,11 @@ type t = {
 
 val add_document : t -> unit
 
-val get_document : string -> t option
+val get_document : Lsp.Types.DocumentUri.t -> t option
 
-val remove_document : string -> unit
+val remove_document : Lsp.Types.DocumentUri.t -> unit
 
-val update_document : string -> string -> int -> string -> unit
+val update_document : Lsp.Types.DocumentUri.t -> string -> int -> unit
+(* val update_document : Lsp.Types.DocumentUri.t -> Lsp.Types.TextDocumentContentChangeEvent.t -> int -> unit *)
+
+val format_documents : unit -> string
