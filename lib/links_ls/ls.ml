@@ -1,4 +1,3 @@
-open Communication_channel
 open Links_lsp.Common
 open Jsonrpc2.Jsonrpc
 open Common
