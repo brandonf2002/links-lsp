@@ -1,5 +1,4 @@
 open Links_lsp.Common
-open Jsonrpc2.Jsonrpc
 open Lsp
 
 open Document_state
@@ -15,7 +14,7 @@ let did_open (p : Client_notification.t) =
     }
   )
   | _ -> failwith "Unreachable");
-  log_to_file ("Hello world" ^ (format_documents ()))
+  log_to_file (format_documents ())
 
 let get_text (change_event : Lsp.Types.TextDocumentContentChangeEvent.t) = change_event.text
 
@@ -32,7 +31,7 @@ let did_change (p : Client_notification.t) =
     do_all (fun x -> update_document uri (get_text x) version) changes;
   )
   | _ -> failwith "Unreachable");
-  log_to_file ("Hello world" ^ (format_documents ()))
+  log_to_file (format_documents ())
 
 let did_close (p : Client_notification.t) =
   (match p with 
@@ -40,4 +39,4 @@ let did_close (p : Client_notification.t) =
     remove_document p.textDocument.uri
   )
   | _ -> failwith "Unreachable");
-  log_to_file ("Hello world" ^ (format_documents ()))
+  log_to_file (format_documents ())
