@@ -15,7 +15,8 @@ let do_initialize channel (r : Request.t) =
     `TextDocumentSyncOptions
       (TextDocumentSyncOptions.create
          ~openClose:true
-         ~change:TextDocumentSyncKind.Full
+         ~change:TextDocumentSyncKind.Incremental
+         (* ~change:TextDocumentSyncKind.Full *)
          ~willSave:false
          ~save:(`SaveOptions (SaveOptions.create ~includeText:false ()))
          ~willSaveWaitUntil:false
@@ -41,12 +42,16 @@ let did_open (n : Jsonrpc2.Jsonrpc.Notification.t) =
   let params = Yojson.Safe.to_string (Notification.yojson_of_t n) in
   log_to_file params
 
+let did_change (n : Jsonrpc2.Jsonrpc.Notification.t) =
+  let params = Yojson.Safe.to_string (Notification.yojson_of_t n) in
+  log_to_file params
+
 let handle_notification (n : Notification.t) = 
   log_to_file n.method_;
   match n.method_ with
   | "exit" -> exit 0
   | "textDocument/didOpen" -> did_open n
-  | "textDocument/didChange" -> log_to_file "didChange"
+  | "textDocument/didChange" -> did_change n
   | "textDocument/didClose" -> log_to_file "didClose"
   | _ -> prerr_endline "Not imlemented yet"
 
