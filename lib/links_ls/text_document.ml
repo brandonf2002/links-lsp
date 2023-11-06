@@ -17,7 +17,7 @@ let did_open (p : Client_notification.t) =
   | _ -> failwith "Unreachable");
   log_to_file ("Hello world" ^ (format_documents ()))
 
-let get_text (x : Lsp.Types.TextDocumentContentChangeEvent.t) = x.text
+let get_text (change_event : Lsp.Types.TextDocumentContentChangeEvent.t) = change_event.text
 
 let did_change (p : Client_notification.t) =
   let rec do_all f lst =
@@ -29,7 +29,7 @@ let did_change (p : Client_notification.t) =
     let changes = p.contentChanges in
     let uri = p.textDocument.uri in
     let version = p.textDocument.version in
-    do_all (function x -> update_document uri (get_text x) version) changes;
+    do_all (fun x -> update_document uri (get_text x) version) changes;
   )
   | _ -> failwith "Unreachable");
   log_to_file ("Hello world" ^ (format_documents ()))

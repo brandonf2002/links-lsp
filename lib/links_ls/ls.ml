@@ -42,8 +42,8 @@ let rec initialize channel =
 let handle_notification (n : Notification.t) = 
   log_to_file n.method_;
   let open Lsp.Client_notification in
-  let x = of_jsonrpc n in
-  match x with
+  let params = of_jsonrpc n in
+  match params with
   | Ok p -> (match n.method_ with
     | "exit" -> exit 0
     | "textDocument/didOpen" -> did_open p
