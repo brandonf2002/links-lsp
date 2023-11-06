@@ -10,3 +10,6 @@ let append_to_file content file_name =
   let oc = open_out_gen [Open_creat; Open_text; Open_append] 0o666 file_name in
   output_string oc (content ^ "\n");
   close_out oc
+
+
+let log_to_file content = append_to_file content "/home/brandon/LSP_test"
