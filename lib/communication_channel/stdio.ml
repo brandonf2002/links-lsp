@@ -10,8 +10,9 @@ let read_message_stdio () : string =
 
 (* TODO Change from using printf to something a bit more efficient *)
 let write_message_stdio msg =
-  let header = {
-    content_length = String.length msg;
-    content_type = None;
-  } in
-  Printf.printf "Content-Length: %d\r\n\r\n%s" header.content_length msg
+  (* let header = { *)
+  (*   content_length = String.length msg; *)
+  (*   content_type = None; *)
+  (* } in *)
+  Printf.printf "%s" msg;
+  flush stdout
