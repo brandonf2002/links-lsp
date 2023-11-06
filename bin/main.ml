@@ -4,7 +4,7 @@ open Communication_channel
 open Jsonrpc
 open Jsonrpc2.Jsonrpc
 
-open Links_ls.Links_lsp
+open Links_ls.Ls
 
 (* The Argument Parsing *) 
 
@@ -153,10 +153,10 @@ let main_loop method_ref =
 
 let _ =
   Arg.parse specs (fun _ -> ()) "Usage: links_lsp [options]";
+  write_to_file "Hello world\n\n" "/home/brandon/LSP_test";
 
   run method_ref;
 
-  (* write_to_file "Hello world\n\n" "/home/brandon/LSP_test"; *)
 
   (* initialize method_ref; *)
 
