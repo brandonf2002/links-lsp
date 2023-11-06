@@ -1,22 +1,10 @@
-open Communication_channel
 open Links_lsp.Common
 open Jsonrpc2.Jsonrpc
-
-let add_content_length_header str =
-  let content_length = String.length str in
-  let header = Printf.sprintf "Content-Length: %d\r\n\r\n" content_length in
-  header ^ str
-
-let read_message channel = 
-  let msg = Yojson.Safe.from_string (Channel.read_message !channel) in
-  Packet.t_of_yojson msg
-
-let write_message channel msg = 
-  Channel.write_message !channel (Response.yojson_of_t msg |> Yojson.Safe.to_string |> add_content_length_header)
+open Common
+open Text_document
 
 let server_not_initialzed ?(id=(`Int 0)) () = 
-  let error = Response.Error.make ~code:Response.Error.Code.ServerNotInitialized ~message:"Server not initialized" () in
-  Response.error id error
+  get_error_response ServerNotInitialized "Sernver not initialized" id
 
 let do_initialize channel (r : Request.t) = 
   let open Lsp.Types in
@@ -28,6 +16,7 @@ let do_initialize channel (r : Request.t) =
     `TextDocumentSyncOptions
       (TextDocumentSyncOptions.create
          ~openClose:true
+         (* ~change:TextDocumentSyncKind.Incremental *)
          ~change:TextDocumentSyncKind.Full
          ~willSave:false
          ~save:(`SaveOptions (SaveOptions.create ~includeText:false ()))
@@ -50,24 +39,30 @@ let rec initialize channel =
     | _ -> write_message channel (server_not_initialzed ()); initialize channel)
   | _ -> write_message channel (server_not_initialzed ()); initialize channel
 
-let did_open (n : Jsonrpc2.Jsonrpc.Notification.t) =
-  let params = Yojson.Safe.to_string (Notification.yojson_of_t n) in
-  log_to_file params
-
 let handle_notification (n : Notification.t) = 
   log_to_file n.method_;
-  match n.method_ with
-  | "exit" -> exit 0
-  | "textDocument/didOpen" -> did_open n
-  | "textDocument/didChange" -> log_to_file "didChange"
-  | "textDocument/didClose" -> log_to_file "didClose"
+  let open Lsp.Client_notification in
+  let params = of_jsonrpc n in
+  match params with
+  | Ok p -> (match n.method_ with
+    | "exit" -> exit 0
+    | "textDocument/didOpen" -> did_open p
+    | "textDocument/didChange" -> did_change p
+    | "textDocument/didClose" -> did_close p
+    | _ -> prerr_endline "Not imlemented yet")
+  | Error e -> "Error: " ^ e |> log_to_file;
+  ()
+
+let handle_request (r : Request.t) = 
+  log_to_file r.method_;
+  match r.method_ with
   | _ -> prerr_endline "Not imlemented yet"
 
 let rec main_loop channel = 
   let packet = read_message channel in
 
   (match packet with
-  | Request _ -> log_to_file "Request"
+  | Request r -> handle_request r
   | Notification r -> handle_notification r
   | Response _ -> failwith "Response"
   | Batch_response _ -> failwith "Batch_response"
@@ -78,10 +73,3 @@ let rec main_loop channel =
 let run channel = 
   initialize channel;
   main_loop channel;
-  (* let rec loop () = *) 
-  (*   let msg = read channel in *)
-  (*   match msg with *)
-  (*   | None -> () *)
-  (*   | Some msg -> *) 
-  (*     let _ = process msg in *)
-  (*     loop () *)
