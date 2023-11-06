@@ -1,6 +1,7 @@
 open Links_lsp.Common
 open Jsonrpc2.Jsonrpc
 open Common
+open Text_document
 
 let server_not_initialzed ?(id=(`Int 0)) () = 
   get_error_response ServerNotInitialized "Sernver not initialized" id
@@ -37,14 +38,6 @@ let rec initialize channel =
     | "exit" -> exit 0
     | _ -> write_message channel (server_not_initialzed ()); initialize channel)
   | _ -> write_message channel (server_not_initialzed ()); initialize channel
-
-let did_open (n : Jsonrpc2.Jsonrpc.Notification.t) =
-  let params = Yojson.Safe.to_string (Notification.yojson_of_t n) in
-  log_to_file params
-
-let did_change (n : Jsonrpc2.Jsonrpc.Notification.t) =
-  let params = Yojson.Safe.to_string (Notification.yojson_of_t n) in
-  log_to_file params
 
 let handle_notification (n : Notification.t) = 
   log_to_file n.method_;
