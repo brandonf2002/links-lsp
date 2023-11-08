@@ -1,4 +1,4 @@
 (library
  (name links_ls)
  (public_name links_lsp.links_ls)
- (libraries links_lsp communication_channel yojson lsp))
+ (libraries links_lsp communication_channel yojson lsp links.core))

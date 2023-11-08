@@ -31,7 +31,8 @@ let did_change (p : Client_notification.t) =
     do_all (fun x -> update_document uri (get_text x) version) changes;
   )
   | _ -> failwith "Unreachable");
-  log_to_file (format_documents ())
+  log_to_file (format_documents ());
+  log_to_file (parse_doc ())
 
 let did_close (p : Client_notification.t) =
   (match p with 

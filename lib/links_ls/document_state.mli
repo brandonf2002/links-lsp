@@ -15,3 +15,5 @@ val update_document : Lsp.Types.DocumentUri.t -> string -> int -> unit
 (* val update_document : Lsp.Types.DocumentUri.t -> Lsp.Types.TextDocumentContentChangeEvent.t -> int -> unit *)
 
 val format_documents : unit -> string
+
+val parse_doc : unit -> string 
