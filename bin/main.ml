@@ -1,7 +1,7 @@
 open Links_lsp.Common
 open Communication_channel
 
-open Links_ls.Ls
+open Links_ls
 
 (* The Argument Parsing *) 
 
@@ -31,6 +31,6 @@ let _ =
   Arg.parse specs (fun _ -> ()) "Usage: links_lsp [options]";
   write_to_file "Starting Server" "/home/brandon/LSP_test";
 
-  run channel;
+  Ls.run channel;
 
   exit 0

@@ -30,14 +30,23 @@ let do_initialize channel (r : Request.t) =
 
 let rec initialize channel =
   let packet = read_message channel in
-  match packet with
+  (match packet with
   | Request r -> (match r.method_ with
     | "initialize" -> do_initialize channel r
     | _ -> write_message channel (server_not_initialzed ()); initialize channel)
   | Notification n -> (match n.method_ with
     | "exit" -> exit 0
     | _ -> write_message channel (server_not_initialzed ()); initialize channel)
-  | _ -> write_message channel (server_not_initialzed ()); initialize channel
+  | _ -> write_message channel (server_not_initialzed ()); initialize channel);
+  let packet = read_message channel in
+
+  match packet with
+  | Notification n -> (match n.method_ with
+    | "exit" -> exit 0
+    | "initialized" -> ()
+    | _ -> exit 1)
+  | _ -> exit 1
+
 
 let handle_notification (n : Notification.t) = 
   let open Lsp.Client_notification in
