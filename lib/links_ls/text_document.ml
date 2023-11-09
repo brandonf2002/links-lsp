@@ -14,7 +14,8 @@ let did_open (p : Client_notification.t) =
     }
   )
   | _ -> failwith "Unreachable");
-  log_to_file (format_documents ())
+  log_to_file (format_documents ());
+  log_to_file (parse_doc ())
 
 let get_text (change_event : Lsp.Types.TextDocumentContentChangeEvent.t) = change_event.text
 
