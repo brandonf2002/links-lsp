@@ -20,11 +20,11 @@ let read_message ch : string =
   | Stdio -> read_message_stdio ()
   | Pipe _ -> failwith "Not implemented"
   | Socket _ -> failwith "Not implemented" in
-  append_to_file ("Reading from channel: \n\n" ^ msg) "/home/brandon/LSP_test";
+  append_to_file ("Reading from channel: \n" ^ msg ^ "\n\n") "/home/brandon/LSP_test";
   msg
 
 let write_message ch msg =
-  append_to_file ("Writing to channel: \n\n" ^ msg) "/home/brandon/LSP_test";
+  append_to_file ("Writing to channel: \n" ^ msg ^ "\n\n") "/home/brandon/LSP_test";
   match ch with
   | Stdio -> write_message_stdio msg
   | Pipe _ -> failwith "Not implemented"

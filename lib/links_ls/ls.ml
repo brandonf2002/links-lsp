@@ -40,23 +40,22 @@ let rec initialize channel =
   | _ -> write_message channel (server_not_initialzed ()); initialize channel
 
 let handle_notification (n : Notification.t) = 
-  log_to_file n.method_;
   let open Lsp.Client_notification in
   let params = of_jsonrpc n in
+  log_to_file n.method_;
   match params with
   | Ok p -> (match n.method_ with
     | "exit" -> exit 0
     | "textDocument/didOpen" -> did_open p
     | "textDocument/didChange" -> did_change p
     | "textDocument/didClose" -> did_close p
-    | _ -> prerr_endline "Not imlemented yet")
+    | _ -> prerr_endline "Not imlemented yet (Notif)"; log_to_file ("Not implimented: " ^ n.method_))
   | Error e -> "Error: " ^ e |> log_to_file;
   ()
 
 let handle_request (r : Request.t) = 
-  log_to_file r.method_;
   match r.method_ with
-  | _ -> prerr_endline "Not imlemented yet"
+  | _ -> prerr_endline "Not imlemented yet (Request)"
 
 let rec main_loop channel = 
   let packet = read_message channel in

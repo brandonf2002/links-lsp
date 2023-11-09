@@ -14,8 +14,8 @@ let did_open (p : Client_notification.t) =
     }
   )
   | _ -> failwith "Unreachable");
-  log_to_file (format_documents ());
-  log_to_file (parse_doc ())
+  log_to_file (format_documents () ^ "\n\n");
+  log_to_file (parse_doc () ^ "\n\n")
 
 let get_text (change_event : Lsp.Types.TextDocumentContentChangeEvent.t) = change_event.text
 
@@ -32,8 +32,8 @@ let did_change (p : Client_notification.t) =
     do_all (fun x -> update_document uri (get_text x) version) changes;
   )
   | _ -> failwith "Unreachable");
-  log_to_file (format_documents ());
-  log_to_file (parse_doc ())
+  log_to_file (format_documents () ^ "\n\n");
+  log_to_file (parse_doc () ^ "\n\n")
 
 let did_close (p : Client_notification.t) =
   (match p with 
@@ -41,4 +41,4 @@ let did_close (p : Client_notification.t) =
     remove_document p.textDocument.uri
   )
   | _ -> failwith "Unreachable");
-  log_to_file (format_documents ())
+  log_to_file (format_documents () ^ "\n\n");

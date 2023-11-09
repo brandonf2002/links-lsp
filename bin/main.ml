@@ -3,8 +3,6 @@ open Communication_channel
 
 open Links_ls.Ls
 
-open Links_core
-
 (* The Argument Parsing *) 
 
 let channel = ref Channel.Stdio
@@ -31,12 +29,7 @@ let specs =
 
 let _ =
   Arg.parse specs (fun _ -> ()) "Usage: links_lsp [options]";
-  write_to_file "Hello world\n\n" "/home/brandon/LSP_test";
-
-  log_to_file "Starting server\n";
-
-  let phr = Sugartypes.Constant (CommonTypes.Constant.Int 42) in
-  log_to_file (Sugartypes.show_phrasenode phr);
+  write_to_file "Starting Server" "/home/brandon/LSP_test";
 
   run channel;
 
