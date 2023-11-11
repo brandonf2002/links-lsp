@@ -9,13 +9,13 @@ type t =
   | Pipe of file
   | Socket of tcp_stream
 
-let describe_channel (ch : t) =
+let describe_channel ch =
     match ch with
   | Stdio -> "Standard I/O"
   | Pipe f -> "Pipe with file: " ^ f  (* Assuming f can be converted to string *)
   | Socket s -> "Socket with stream: " ^ (string_of_int s)  (* Assuming s can be converted to string *)
 
-let read_message ch : string =
+let read_message ch =
   let msg = match ch with
   | Stdio -> read_message_stdio ()
   | Pipe _ -> failwith "Not implemented"
