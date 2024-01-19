@@ -3,6 +3,7 @@ type t = {
   version: int;
   content: string;
   language_id: string;
+  ast: Links_core.Sugartypes.program Links_core.Frontend.result;
 }
 
 module DocumentTable = Hashtbl.Make(struct
@@ -20,6 +21,7 @@ let add_document doc =
   DocumentTable.add documents doc.uri doc
 
 let update_document uri new_content new_version =
+  current_uri := Some uri;
   match DocumentTable.find_opt documents uri with
   | Some doc -> DocumentTable.replace documents uri { doc with content = new_content; version = new_version }
   | None -> failwith "Document not found"
@@ -29,6 +31,8 @@ let remove_document uri =
 
 let get_document uri =
   DocumentTable.find_opt documents uri
+
+(* let gen_ast uri = *) 
 
 let parse_doc () : string = 
   let x = Linxer.Phases.initialise () in

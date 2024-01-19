@@ -3,6 +3,7 @@ type t = {
   version: int;
   content: string;
   language_id: string;
+  ast: Links_core.Sugartypes.program Links_core.Frontend.result;
 }
 
 val add_document : t -> unit
