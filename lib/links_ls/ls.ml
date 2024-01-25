@@ -71,13 +71,13 @@ let default_fail_response ?(error="Invalid Request") () =
 
 let handle_request channel (r : Request.t) = 
   let open Lsp.Client_request in
-  let x = match of_jsonrpc r with
+  let result = match of_jsonrpc r with
   | Error e -> Result.error (default_fail_response ~error:e ())
   | Ok p -> match p with
     | E (Shutdown) -> Result.ok (shutdown ())
-    | E (TextDocumentPrepareRename _params) -> Result.error (default_fail_response ~error:"Coming from the match!!!!" ())
+    | E (TextDocumentPrepareRename params) -> Result.ok (prepare_rename params)
     | _ -> Result.error (default_fail_response ~error:"Hello world!" ()) in
-  write_message channel {id=r.id; result=x}
+  write_message channel {id=r.id; result=result}
 
 let rec main_loop channel = 
   let packet = read_message channel in

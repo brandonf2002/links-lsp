@@ -34,9 +34,9 @@ let did_change (p : Client_notification.t) =
     let version = p.textDocument.version in
     do_all (fun x -> update_document uri (get_text x) version) changes;
     )
-  | _ -> failwith "Unreachable")
-  (* log_to_file (format_documents () ^ "\n\n"); *)
-  (* log_to_file (parse_doc_string () ^ "\n\n") *)
+  | _ -> failwith "Unreachable");
+  log_to_file (format_documents () ^ "\n\n");
+  log_to_file (parse_doc_string () ^ "\n\n")
 
 let did_close (p : Client_notification.t) =
   (match p with 
@@ -44,7 +44,10 @@ let did_close (p : Client_notification.t) =
   | _ -> failwith "Unreachable");
   log_to_file (format_documents () ^ "\n\n")
 
-(* let prepare_rename *) 
+let prepare_rename (p : Types.PrepareRenameParams.t) =
+  "Testing something: " ^ string_of_int p.position.line |> log_to_file;
+  "Testing something: " ^ string_of_int p.position.character |> log_to_file;
+  `Null
 
 (* let prep_rename channel (r : 'a Client_request.t) id = *)
 (*   let params = (match r with *)
