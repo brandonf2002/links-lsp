@@ -34,7 +34,14 @@ let get_document uri =
 
 (* let gen_ast uri = *) 
 
-let parse_doc () : string = 
+let parse_doc_ast () : Links_core.Sugartypes.program Links_core.Frontend.result = 
+  let x = Linxer.Phases.initialise () in
+  let doc = DocumentTable.find documents (Option.get !current_uri) in
+  (* try *) 
+    Linxer.Phases.evaluate_string x (doc.content)
+  (* with e -> Links_core.Errors.format_exception e *)
+
+let parse_doc_string () : string = 
   let x = Linxer.Phases.initialise () in
   let doc = DocumentTable.find documents (Option.get !current_uri) in
   try 

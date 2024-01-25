@@ -1,6 +1,8 @@
 open Links_lsp.Common
 open Lsp
 
+open Global
+
 open Document_state
 
 let did_open (p : Client_notification.t) =
@@ -10,12 +12,13 @@ let did_open (p : Client_notification.t) =
       uri = p.textDocument.uri; 
       version = p.textDocument.version; 
       language_id = p.textDocument.languageId; 
-      content = p.textDocument.text
+      content = p.textDocument.text;
+      ast = Linxer.Phases.evaluate_string (get_init_context ()) (p.textDocument.text)
     }
   )
   | _ -> failwith "Unreachable");
   log_to_file (format_documents () ^ "\n\n");
-  log_to_file (parse_doc () ^ "\n\n")
+  log_to_file (parse_doc_string () ^ "\n\n")
 
 let get_text (change_event : Lsp.Types.TextDocumentContentChangeEvent.t) = change_event.text
 
@@ -33,7 +36,7 @@ let did_change (p : Client_notification.t) =
   )
   | _ -> failwith "Unreachable");
   log_to_file (format_documents () ^ "\n\n");
-  log_to_file (parse_doc () ^ "\n\n")
+  log_to_file (parse_doc_string () ^ "\n\n")
 
 let did_close (p : Client_notification.t) =
   (match p with 
