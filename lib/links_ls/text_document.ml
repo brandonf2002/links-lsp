@@ -15,7 +15,7 @@ let did_open (p : Client_notification.t) =
       content = p.textDocument.text;
       ast = Linxer.Phases.evaluate_string (get_init_context ()) (p.textDocument.text)
     }
-  )
+      )
   | _ -> failwith "Unreachable");
   log_to_file (format_documents () ^ "\n\n");
   log_to_file (parse_doc_string () ^ "\n\n")
@@ -33,7 +33,7 @@ let did_change (p : Client_notification.t) =
     let uri = p.textDocument.uri in
     let version = p.textDocument.version in
     do_all (fun x -> update_document uri (get_text x) version) changes;
-  )
+    )
   | _ -> failwith "Unreachable");
   log_to_file (format_documents () ^ "\n\n");
   log_to_file (parse_doc_string () ^ "\n\n")
@@ -42,6 +42,6 @@ let did_close (p : Client_notification.t) =
   (match p with 
   | TextDocumentDidClose p -> (
     remove_document p.textDocument.uri
-  )
+)
   | _ -> failwith "Unreachable");
   log_to_file (format_documents () ^ "\n\n");

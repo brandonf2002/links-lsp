@@ -23,7 +23,10 @@ let do_initialize channel (r : Request.t) =
          ~willSaveWaitUntil:false
          ())
   in
-  let capabilities = ServerCapabilities.create ~textDocumentSync () in
+  let renameProvider =
+    `RenameOptions (RenameOptions.create ~prepareProvider:true ())
+  in
+  let capabilities = ServerCapabilities.create ~textDocumentSync ~renameProvider () in
   let init_result = InitializeResult.create ~capabilities ~serverInfo () in
   let msg = Response.ok r.id (InitializeResult.yojson_of_t init_result) in
   write_message channel msg
@@ -47,11 +50,9 @@ let rec initialize channel =
     | _ -> exit 1)
   | _ -> exit 1
 
-
 let handle_notification (n : Notification.t) = 
   let open Lsp.Client_notification in
   let params = of_jsonrpc n in
-  log_to_file n.method_;
   match params with
   | Ok p -> (match n.method_ with
     | "exit" -> exit 0
@@ -63,8 +64,14 @@ let handle_notification (n : Notification.t) =
   ()
 
 let handle_request (r : Request.t) = 
-  match r.method_ with
-  | _ -> prerr_endline "Not imlemented yet (Request)"
+  let open Lsp.Client_request in
+  let params = of_jsonrpc r in
+  match params with
+  | Ok _p -> (match r.method_ with
+    | "textDocument/prepareRename" -> "Not imlemented yet WOOOOOO!" |> log_to_file
+    | _ -> "Not imlemented yet (Request) " ^ r.method_ |> log_to_file)
+  | Error e -> "Error: " ^ e |> log_to_file;
+  ()
 
 let rec main_loop channel = 
   let packet = read_message channel in
