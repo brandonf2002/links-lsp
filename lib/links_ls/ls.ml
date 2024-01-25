@@ -50,6 +50,10 @@ let rec initialize channel =
     | _ -> exit 1)
   | _ -> exit 1
 
+(* Just keeping this here as we might want to do more complex things with the shutdown process later to kill/save things *)
+let shutdown id = 
+  Response.ok id (`Null)
+
 let handle_notification (n : Notification.t) = 
   let open Lsp.Client_notification in
   let params = of_jsonrpc n in
@@ -63,21 +67,33 @@ let handle_notification (n : Notification.t) =
   | Error e -> "Error: " ^ e |> log_to_file;
   ()
 
-let handle_request (r : Request.t) = 
+let default_fail_response ?(id=(`Int 0)) ?(error="Invalid Request") () = 
+  get_error_response InvalidRequest error id
+
+let handle_request channel (r : Request.t) = 
   let open Lsp.Client_request in
-  let params = of_jsonrpc r in
-  match params with
-  | Ok _p -> (match r.method_ with
-    | "textDocument/prepareRename" -> "Not imlemented yet WOOOOOO!" |> log_to_file
-    | _ -> "Not imlemented yet (Request) " ^ r.method_ |> log_to_file)
-  | Error e -> "Error: " ^ e |> log_to_file;
-  ()
+  (match of_jsonrpc r with
+  | Error e -> default_fail_response ~id:r.id ~error:e ()
+  | Ok p -> match p with
+    | E (Shutdown) -> shutdown r.id
+    | E (TextDocumentPrepareRename _params) -> default_fail_response ~id:r.id () ~error:"Coming from the match!!!!"
+    | _ -> default_fail_response ~id:r.id () ~error:"Hello world!") 
+
+  |> write_message channel
+  (* match params with *)
+  (* | Ok _ -> write_message channel (match r.method_ with *)
+  (*   (1* | "textDocument/prepareRename" -> prep_rename channel p r.id (2* "Not imlemented yet WOOOOOO!" |> log_to_file *2) *1) *)
+  (*   (1* | _ -> "Not imlemented yet (Request) " ^ r.method_ |> log_to_file) *1) *)
+  (*   | "shutdown" -> Response.ok r.id (`Bool true) *)
+  (*   | _ -> default_fail_response ~id:r.id ()) *)
+  (* | Error e -> "Error: " ^ e |> log_to_file; *)
+  (* () *)
 
 let rec main_loop channel = 
   let packet = read_message channel in
 
   (match packet with
-  | Request r -> handle_request r
+  | Request r -> handle_request channel r
   | Notification r -> handle_notification r
   | Response _ -> failwith "Response"
   | Batch_response _ -> failwith "Batch_response"
