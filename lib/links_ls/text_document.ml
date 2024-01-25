@@ -1,6 +1,7 @@
 open Links_lsp.Common
-open Jsonrpc2.Jsonrpc
 open Lsp
+
+open Global
 
 open Document_state
 
@@ -11,11 +12,13 @@ let did_open (p : Client_notification.t) =
       uri = p.textDocument.uri; 
       version = p.textDocument.version; 
       language_id = p.textDocument.languageId; 
-      content = p.textDocument.text
+      content = p.textDocument.text;
+      ast = Linxer.Phases.evaluate_string (get_init_context ()) (p.textDocument.text)
     }
-  )
-  | _ -> failwith "Unreachable");
-  log_to_file ("Hello world" ^ (format_documents ()))
+      )
+  | _ -> failwith "Unreachable")
+  (* log_to_file (format_documents () ^ "\n\n"); *)
+  (* log_to_file (parse_doc_string () ^ "\n\n") *)
 
 let get_text (change_event : Lsp.Types.TextDocumentContentChangeEvent.t) = change_event.text
 
@@ -30,14 +33,22 @@ let did_change (p : Client_notification.t) =
     let uri = p.textDocument.uri in
     let version = p.textDocument.version in
     do_all (fun x -> update_document uri (get_text x) version) changes;
-  )
-  | _ -> failwith "Unreachable");
-  log_to_file ("Hello world" ^ (format_documents ()))
+    )
+  | _ -> failwith "Unreachable")
+  (* log_to_file (format_documents () ^ "\n\n"); *)
+  (* log_to_file (parse_doc_string () ^ "\n\n") *)
 
 let did_close (p : Client_notification.t) =
   (match p with 
-  | TextDocumentDidClose p -> (
-    remove_document p.textDocument.uri
-  )
+  | TextDocumentDidClose p -> remove_document p.textDocument.uri
   | _ -> failwith "Unreachable");
-  log_to_file ("Hello world" ^ (format_documents ()))
+  log_to_file (format_documents () ^ "\n\n")
+
+(* let prep_rename channel (r : 'a Client_request.t) id = *)
+(*   let params = (match r with *)
+(*   | TextDocumentPrepareRename r -> r) in *)
+  
+  (* (1* let uri = params.textDocument.uri in *1) *)
+  (* (1* let doc = get_document uri in *1) *)
+
+  (* write_message channel (Response.error id Response.Error.Code.InternalError) *)

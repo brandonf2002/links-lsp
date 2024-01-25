@@ -23,24 +23,38 @@ let do_initialize channel (r : Request.t) =
          ~willSaveWaitUntil:false
          ())
   in
-  let capabilities = ServerCapabilities.create ~textDocumentSync () in
+  let renameProvider =
+    `RenameOptions (RenameOptions.create ~prepareProvider:true ())
+  in
+  let capabilities = ServerCapabilities.create ~textDocumentSync ~renameProvider () in
   let init_result = InitializeResult.create ~capabilities ~serverInfo () in
   let msg = Response.ok r.id (InitializeResult.yojson_of_t init_result) in
   write_message channel msg
 
 let rec initialize channel =
   let packet = read_message channel in
-  match packet with
+  (match packet with
   | Request r -> (match r.method_ with
     | "initialize" -> do_initialize channel r
     | _ -> write_message channel (server_not_initialzed ()); initialize channel)
   | Notification n -> (match n.method_ with
     | "exit" -> exit 0
     | _ -> write_message channel (server_not_initialzed ()); initialize channel)
-  | _ -> write_message channel (server_not_initialzed ()); initialize channel
+  | _ -> write_message channel (server_not_initialzed ()); initialize channel);
+  let packet = read_message channel in
+
+  match packet with
+  | Notification n -> (match n.method_ with
+    | "exit" -> exit 0
+    | "initialized" -> ()
+    | _ -> exit 1)
+  | _ -> exit 1
+
+(* Just keeping this here as we might want to do more complex things with the shutdown process later to kill/save things *)
+let shutdown id = 
+  Response.ok id (`Null)
 
 let handle_notification (n : Notification.t) = 
-  log_to_file n.method_;
   let open Lsp.Client_notification in
   let params = of_jsonrpc n in
   match params with
@@ -49,20 +63,37 @@ let handle_notification (n : Notification.t) =
     | "textDocument/didOpen" -> did_open p
     | "textDocument/didChange" -> did_change p
     | "textDocument/didClose" -> did_close p
-    | _ -> prerr_endline "Not imlemented yet")
+    | _ -> prerr_endline "Not imlemented yet (Notif)"; log_to_file ("Not implimented: " ^ n.method_))
   | Error e -> "Error: " ^ e |> log_to_file;
   ()
 
-let handle_request (r : Request.t) = 
-  log_to_file r.method_;
-  match r.method_ with
-  | _ -> prerr_endline "Not imlemented yet"
+let default_fail_response ?(id=(`Int 0)) ?(error="Invalid Request") () = 
+  get_error_response InvalidRequest error id
+
+let handle_request channel (r : Request.t) = 
+  let open Lsp.Client_request in
+  (match of_jsonrpc r with
+  | Error e -> default_fail_response ~id:r.id ~error:e ()
+  | Ok p -> match p with
+    | E (Shutdown) -> shutdown r.id
+    | E (TextDocumentPrepareRename _params) -> default_fail_response ~id:r.id () ~error:"Coming from the match!!!!"
+    | _ -> default_fail_response ~id:r.id () ~error:"Hello world!") 
+
+  |> write_message channel
+  (* match params with *)
+  (* | Ok _ -> write_message channel (match r.method_ with *)
+  (*   (1* | "textDocument/prepareRename" -> prep_rename channel p r.id (2* "Not imlemented yet WOOOOOO!" |> log_to_file *2) *1) *)
+  (*   (1* | _ -> "Not imlemented yet (Request) " ^ r.method_ |> log_to_file) *1) *)
+  (*   | "shutdown" -> Response.ok r.id (`Bool true) *)
+  (*   | _ -> default_fail_response ~id:r.id ()) *)
+  (* | Error e -> "Error: " ^ e |> log_to_file; *)
+  (* () *)
 
 let rec main_loop channel = 
   let packet = read_message channel in
 
   (match packet with
-  | Request r -> handle_request r
+  | Request r -> handle_request channel r
   | Notification r -> handle_notification r
   | Response _ -> failwith "Response"
   | Batch_response _ -> failwith "Batch_response"

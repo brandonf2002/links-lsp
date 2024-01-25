@@ -2,5 +2,4 @@
  (public_name links_lsp)
  (name main)
  (flags (:standard -w -69-32-27))
- (modes byte)
- (libraries links_ls links_lsp yojson communication_channel jsonrpc lsp))
+ (libraries unix links_ls links_lsp yojson communication_channel jsonrpc lsp links.core))

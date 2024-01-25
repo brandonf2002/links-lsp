@@ -1,9 +1,7 @@
 open Links_lsp.Header_parser
-open Links_lsp.Common
 
 let read_message_stdio () : string =
   let header = parse_header () in
-  append_to_file "DONE" "/home/brandon/LSP_test";
   let buffer = Bytes.create header.content_length in
   really_input stdin buffer 0 header.content_length;
   Bytes.to_string buffer
