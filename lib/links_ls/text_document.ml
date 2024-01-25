@@ -44,6 +44,8 @@ let did_close (p : Client_notification.t) =
   | _ -> failwith "Unreachable");
   log_to_file (format_documents () ^ "\n\n")
 
+(* let prepare_rename *) 
+
 (* let prep_rename channel (r : 'a Client_request.t) id = *)
 (*   let params = (match r with *)
 (*   | TextDocumentPrepareRename r -> r) in *)

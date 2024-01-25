@@ -51,8 +51,7 @@ let rec initialize channel =
   | _ -> exit 1
 
 (* Just keeping this here as we might want to do more complex things with the shutdown process later to kill/save things *)
-let shutdown id = 
-  Response.ok id (`Null)
+let shutdown () = `Null
 
 let handle_notification (n : Notification.t) = 
   let open Lsp.Client_notification in
@@ -67,27 +66,18 @@ let handle_notification (n : Notification.t) =
   | Error e -> "Error: " ^ e |> log_to_file;
   ()
 
-let default_fail_response ?(id=(`Int 0)) ?(error="Invalid Request") () = 
-  get_error_response InvalidRequest error id
+let default_fail_response ?(error="Invalid Request") () = 
+  Response.Error.make ~code:InvalidRequest ~message:error ()
 
 let handle_request channel (r : Request.t) = 
   let open Lsp.Client_request in
-  (match of_jsonrpc r with
-  | Error e -> default_fail_response ~id:r.id ~error:e ()
+  let x = match of_jsonrpc r with
+  | Error e -> Result.error (default_fail_response ~error:e ())
   | Ok p -> match p with
-    | E (Shutdown) -> shutdown r.id
-    | E (TextDocumentPrepareRename _params) -> default_fail_response ~id:r.id () ~error:"Coming from the match!!!!"
-    | _ -> default_fail_response ~id:r.id () ~error:"Hello world!") 
-
-  |> write_message channel
-  (* match params with *)
-  (* | Ok _ -> write_message channel (match r.method_ with *)
-  (*   (1* | "textDocument/prepareRename" -> prep_rename channel p r.id (2* "Not imlemented yet WOOOOOO!" |> log_to_file *2) *1) *)
-  (*   (1* | _ -> "Not imlemented yet (Request) " ^ r.method_ |> log_to_file) *1) *)
-  (*   | "shutdown" -> Response.ok r.id (`Bool true) *)
-  (*   | _ -> default_fail_response ~id:r.id ()) *)
-  (* | Error e -> "Error: " ^ e |> log_to_file; *)
-  (* () *)
+    | E (Shutdown) -> Result.ok (shutdown ())
+    | E (TextDocumentPrepareRename _params) -> Result.error (default_fail_response ~error:"Coming from the match!!!!" ())
+    | _ -> Result.error (default_fail_response ~error:"Hello world!" ()) in
+  write_message channel {id=r.id; result=x}
 
 let rec main_loop channel = 
   let packet = read_message channel in
