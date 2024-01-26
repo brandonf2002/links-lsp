@@ -3,7 +3,7 @@ type t = {
   version: int;
   content: string;
   language_id: string;
-  ast: Links_core.Sugartypes.program Links_core.Frontend.result;
+  ast: Links_core.Sugartypes.program Links_core.Loader.result;
 }
 
 val add_document : t -> unit
@@ -17,6 +17,6 @@ val update_document : Lsp.Types.DocumentUri.t -> string -> int -> unit
 
 val format_documents : unit -> string
 
-val parse_doc_ast : unit -> Links_core.Sugartypes.program Links_core.Frontend.result
+val parse_doc_ast : unit -> Links_core.Sugartypes.program Links_core.Loader.result
 
 val parse_doc_string : unit -> string 

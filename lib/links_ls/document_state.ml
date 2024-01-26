@@ -3,7 +3,7 @@ type t = {
   version: int;
   content: string;
   language_id: string;
-  ast: Links_core.Sugartypes.program Links_core.Frontend.result;
+  ast: Links_core.Sugartypes.program Links_core.Loader.result;
 }
 
 module DocumentTable = Hashtbl.Make(struct
@@ -34,7 +34,7 @@ let get_document uri =
 
 (* let gen_ast uri = *) 
 
-let parse_doc_ast () : Links_core.Sugartypes.program Links_core.Frontend.result = 
+let parse_doc_ast () : Links_core.Sugartypes.program Links_core.Loader.result = 
   let x = Linxer.Phases.initialise () in
   let doc = DocumentTable.find documents (Option.get !current_uri) in
   Linxer.Phases.evaluate_string x (doc.content)
@@ -44,9 +44,18 @@ let parse_doc_string () : string =
   let doc = DocumentTable.find documents (Option.get !current_uri) in
   try 
     let context = Linxer.Phases.evaluate_string x (doc.content) in
-    let y = context.program in
+    let y = context.program_ in
     Links_core.Sugartypes.show_program y
   with e -> Links_core.Errors.format_exception e
+
+(* let parse_doc_whole () : string = *) 
+(*   let x = Linxer.Phases.initialise () in *)
+(*   let doc = DocumentTable.find documents (Option.get !current_uri) in *)
+(*   try *) 
+(*     let context = Linxer.Phases.evaluate_string x (doc.content) in *)
+(*     let y = context.program in *)
+(*     Links_core.Sugartypes.show_program y *)
+(*   with e -> Links_core.Errors.format_exception e *)
 
 let format_documents () : string =
   let buffer = Buffer.create 256 in (* Use a buffer for efficient string concatenation *)

@@ -16,9 +16,9 @@ let did_open (p : Client_notification.t) =
       ast = Linxer.Phases.evaluate_string (get_init_context ()) (p.textDocument.text)
     }
       )
-  | _ -> failwith "Unreachable")
+  | _ -> failwith "Unreachable");
   (* log_to_file (format_documents () ^ "\n\n"); *)
-  (* log_to_file (parse_doc_string () ^ "\n\n") *)
+  log_to_file (parse_doc_string () ^ "\n\n")
 
 let get_text (change_event : Lsp.Types.TextDocumentContentChangeEvent.t) = change_event.text
 
@@ -34,9 +34,9 @@ let did_change (p : Client_notification.t) =
     let version = p.textDocument.version in
     do_all (fun x -> update_document uri (get_text x) version) changes;
     )
-  | _ -> failwith "Unreachable");
-  log_to_file (format_documents () ^ "\n\n");
-  log_to_file (parse_doc_string () ^ "\n\n")
+  | _ -> failwith "Unreachable")
+  (* log_to_file (parse_doc_string () ^ "\n\n") *)
+  (* log_to_file (format_documents () ^ "\n\n"); *)
 
 let did_close (p : Client_notification.t) =
   (match p with 
@@ -44,10 +44,15 @@ let did_close (p : Client_notification.t) =
   | _ -> failwith "Unreachable");
   log_to_file (format_documents () ^ "\n\n")
 
+(* TODO: Make return result for some failure cases *)
 let prepare_rename (p : Types.PrepareRenameParams.t) =
   "Testing something: " ^ string_of_int p.position.line |> log_to_file;
   "Testing something: " ^ string_of_int p.position.character |> log_to_file;
-  `Null
+  (* get current docs *)
+  let doc = get_document p.textDocument.uri in
+  match doc with
+  | None -> `Null
+  | Some v -> "Testing something: " ^ v.content |> log_to_file; `String "Testing"
 
 (* let prep_rename channel (r : 'a Client_request.t) id = *)
 (*   let params = (match r with *)

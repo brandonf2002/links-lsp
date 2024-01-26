@@ -106,8 +106,9 @@ module Phases = struct
     Parse.run initial_context filename
       |> Desugar.run
 
-  let evaluate_string : Context.t -> string -> Links_core.Sugartypes.program Links_core.Frontend.result
+  (* let evaluate_string : Context.t -> string -> Links_core.Sugartypes.program Links_core.Frontend.result *)
+  let evaluate_string : Context.t -> string -> Links_core.Sugartypes.program Loader.result
     = fun initial_context source_code ->
     Parse.string initial_context source_code
-    |> Desugar.run
+    (* |> Desugar.run *)
 end
