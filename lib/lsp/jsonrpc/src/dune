@@ -1,7 +1,7 @@
 (include_subdirs no)
 
 (library
-  (name jsonrpc2)
+ (name jsonrpc2)
  (public_name links_lsp.jsonrpc2)
  (instrumentation
   (backend bisect_ppx)))

@@ -5,6 +5,7 @@ let read_message_stdio () : string =
   let buffer = Bytes.create header.content_length in
   really_input stdin buffer 0 header.content_length;
   Bytes.to_string buffer
+;;
 
 (* TODO Change from using printf to something a bit more efficient *)
 let write_message_stdio msg =
@@ -14,3 +15,4 @@ let write_message_stdio msg =
   (* } in *)
   Printf.printf "%s" msg;
   flush stdout
+;;
