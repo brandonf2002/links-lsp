@@ -1,5 +1,14 @@
 (executable
  (public_name links_lsp)
  (name main)
- (flags (:standard -w -69-32-27))
- (libraries unix links_ls links_lsp yojson communication_channel jsonrpc lsp links.core))
+ (flags
+  (:standard -w -69-32-27))
+ (libraries
+  unix
+  links_ls
+  links_lsp
+  yojson
+  communication_channel
+  jsonrpc
+  lsp
+  links.core))
