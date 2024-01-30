@@ -2,7 +2,6 @@ open Links_lsp.Common
 open Lsp
 
 (* open Global *)
-
 open Document_state
 
 (* TODO: Make return result for some failure cases *)
