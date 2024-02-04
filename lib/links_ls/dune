@@ -1,4 +1,7 @@
 (library
  (name links_ls)
  (public_name links_lsp.links_ls)
+   (inline_tests (flags ()))
+  (preprocess
+    (pps ppx_inline_test ppx_assert ppx_expect))
  (libraries links_lsp communication_channel yojson lsp links.core))

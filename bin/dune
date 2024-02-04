@@ -1,6 +1,11 @@
+(env
+ (release
+  (ocamlopt_flags (:standard -O3))))
+
 (executable
  (public_name links_lsp)
  (name main)
+ (modes native)
  (flags
   (:standard -w -69-32-27))
  (libraries

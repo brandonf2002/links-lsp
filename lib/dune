@@ -1,3 +1,4 @@
 (library
  (name links_lsp)
+  (libraries base stdio unix)
  (public_name links_lsp))
