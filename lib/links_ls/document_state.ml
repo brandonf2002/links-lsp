@@ -3,7 +3,7 @@ type t =
   ; version : int
   ; content : string
   ; language_id : string
-  ; ast : Links_core.Sugartypes.program Links_core.Loader.result
+  ; ast : Links_core.Sugartypes.program Links_core.Loader.result option
   }
 
 module DocumentTable = Hashtbl.Make (struct

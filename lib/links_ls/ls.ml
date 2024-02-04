@@ -4,6 +4,12 @@ open Common
 open Text_document
 open Rename
 
+(* [%%if TEST] *)
+
+(* let get_value = 10 (1* Test code here *1) *)
+
+(* [%%endif] *)
+
 let server_not_initialzed ?(id = `Int 0) () =
   get_error_response ServerNotInitialized "Sernver not initialized" id
 ;;

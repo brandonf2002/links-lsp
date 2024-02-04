@@ -1,2 +1,6 @@
-(test
- (name links_lsp))
+(library
+  (name testing)
+  (libraries base stdio )
+   (inline_tests (flags ()))
+  (preprocess
+    (pps ppx_inline_test ppx_assert ppx_expect)))

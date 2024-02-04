@@ -4,6 +4,8 @@ open Global
 open Document_state
 
 let did_open (p : Client_notification.t) =
+  (* let ast = *)
+  (* in *)
   match p with
   | TextDocumentDidOpen p ->
     add_document
@@ -11,7 +13,11 @@ let did_open (p : Client_notification.t) =
       ; version = p.textDocument.version
       ; language_id = p.textDocument.languageId
       ; content = p.textDocument.text
-      ; ast = Linxer.Phases.Parse.string (get_init_context ()) p.textDocument.text
+      ; ast =
+          (try
+             Some (Linxer.Phases.Parse.string (get_init_context ()) p.textDocument.text)
+           with
+           | _ -> None)
       }
   | _ -> failwith "Unreachable"
 ;;
