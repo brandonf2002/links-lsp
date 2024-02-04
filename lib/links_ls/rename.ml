@@ -14,12 +14,13 @@ type range =
   | After
   | Inside
 
+(* TODO: optimise this to end after we have went past the pos *)
 let is_within_range start_pos end_pos pos =
   let is_after_start =
     pos.line > start_pos.line || (pos.line = start_pos.line && pos.col >= start_pos.col)
   in
   let is_before_end =
-    pos.line < end_pos.line || (pos.line = end_pos.line && pos.col <= end_pos.col)
+    pos.line < end_pos.line || (pos.line = end_pos.line && pos.col <= end_pos.col - 1)
   in
   match is_after_start, is_before_end with
   | true, true -> Inside
@@ -28,10 +29,10 @@ let is_within_range start_pos end_pos pos =
   | false, false -> Before
 ;;
 
-let char_to_line_col str pos known_line =
+let calc_pos ?(debug_info = "") str pos known_line =
   let len = String.length str in
-  if pos < 0 || pos >= len then invalid_arg "Position out of bounds";
-  (* Find the starting index of the known line *)
+  if pos < 0 || pos >= len
+  then invalid_arg ("Position out of bounds: " ^ debug_info ^ " " ^ string_of_int pos);
   let rec find_line_start i line =
     if i >= len || line = known_line
     then i
@@ -53,6 +54,13 @@ let char_to_line_col str pos known_line =
   aux start_index 1
 ;;
 
+let get_real_position ?(name = "") pos content =
+  let start = Position.start pos in
+  let finish = Position.finish pos in
+  ( calc_pos ~debug_info:name content start.pos_cnum start.pos_lnum
+  , calc_pos ~debug_info:name content finish.pos_cnum finish.pos_lnum )
+;;
+
 (* Tuple in the form ('_, start_pos, end_pos) representing the *)
 type _ renamable =
   | Phrase :
@@ -61,6 +69,9 @@ type _ renamable =
   | Binding :
       (Links_core.Sugartypes.binding * position * position)
       -> Links_core.Sugartypes.binding renamable
+  | Pattern :
+      (Links_core.Sugartypes.Pattern.t * position * position)
+      -> Links_core.Sugartypes.Pattern.t renamable
 
 and any_t = Anything : 'a renamable -> any_t
 
@@ -71,8 +82,28 @@ class prepare_rename_traversal content =
     method get_phrase_positions = phrase_positions
     method add_phrase_position i = phrase_positions <- i :: phrase_positions
 
-    (* method printer = log_to_file *)
-    method printer = print_endline
+    method is_inside pos =
+      let rec aux positions =
+        match positions with
+        | x :: xs ->
+          let range, s, f =
+            match x with
+            | Anything (Phrase (_, start, finish)) ->
+              is_within_range start finish pos, start, finish
+            | Anything (Binding (_, start, finish)) ->
+              is_within_range start finish pos, start, finish
+            | Anything (Pattern (_, start, finish)) ->
+              is_within_range start finish pos, start, finish
+          in
+          (match range with
+           | Inside -> Some (s, f)
+           | _ -> aux xs)
+        | [] -> None
+      in
+      aux self#get_phrase_positions
+
+    method printer = log_to_file
+    (* method printer = print_endline *)
 
     method pp_phrase_positions () =
       let open Links_core.Sugartypes in
@@ -99,77 +130,66 @@ class prepare_rename_traversal content =
           (match WithPos.node b with
            | Fun f -> pp (Binder.to_name f.fun_binder) start_pos end_pos
            | _ -> ())
+        | Pattern (p, start, finish) ->
+          (match p with
+           | Variable v -> pp (Binder.to_name v) start finish
+           | _ -> ())
       in
       List.iter pp_each (List.rev phrase_positions)
 
-    (* method! name n = *)
-    (*   print_endline n; *)
-    (*   super#string n *)
-
-    method! phrasenode p =
-      match p with
-      | _ -> super#phrasenode p
-
     method! phrase p =
-      match p.node with
-      | Var _ ->
-        let start = Position.start p.pos in
-        let finish = Position.finish p.pos in
-        let start_pos = char_to_line_col content start.pos_cnum start.pos_lnum in
-        let finish_pos = char_to_line_col content finish.pos_cnum finish.pos_lnum in
-        self#add_phrase_position (Anything (Phrase (p, start_pos, finish_pos)));
-        (* self#add_phrase_position (start_pos, finish_pos); *)
-        super#phrase p
-      | _ -> super#phrase p
+      (match p.node with
+       | Var _ ->
+         let start, finish = get_real_position p.pos content in
+         self#add_phrase_position (Anything (Phrase (p, start, finish)))
+       | _ -> ());
+      super#phrase p
 
     method! binding b =
-      let open Links_core.Sugartypes in
       (match b.node with
        | Fun f ->
-         (* let name = Binder.to_name f.fun_binder in *)
-         (* self#printer name; *)
-         let start = Position.start f.fun_binder.pos in
-         let finish = Position.finish f.fun_binder.pos in
-         (* self#printer (Position.show b.pos); *)
-         (* self#printer (Position.show f.fun_binder.pos); *)
-         (* self#printer ""; *)
-         let start_pos = char_to_line_col content start.pos_cnum start.pos_lnum in
-         let finish_pos = char_to_line_col content finish.pos_cnum finish.pos_lnum in
-         self#add_phrase_position (Anything (Binding (b, start_pos, finish_pos)));
-         ()
+         let start, finish = get_real_position f.fun_binder.pos content in
+         self#add_phrase_position (Anything (Binding (b, start, finish)))
        | _ -> ());
       super#binding b
 
-    method! name n = super#name n
+    method! pattern p =
+      (match p.node with
+       | Variable _ ->
+         let start, finish = get_real_position p.pos content in
+         self#add_phrase_position (Anything (Pattern (p.node, start, finish)))
+       | _ -> ());
+      super#pattern p
 
-    method! binder n =
-      (* let open Links_core.Sugartypes in *)
-      (* self#printer (Binder.to_name n); *)
-      (* self#printer (Position.show n.pos); *)
-      super#binder n
+    method! name n = super#name n
+    method! binder n = super#binder n
+    method! phrasenode p = super#phrasenode p
   end
 
 (* TODO: Make return result for some failure cases *)
 let prepare_rename (p : Types.PrepareRenameParams.t) =
-  "Testing something: " ^ string_of_int p.position.line |> log_to_file;
-  "Testing something: " ^ string_of_int p.position.character |> log_to_file;
-  (* get current docs *)
   let doc = get_document p.textDocument.uri in
   let content =
     match doc with
     | None -> ""
     | Some v -> v.content
   in
-  (* let _, _ = Links_core.Parse.parse_string Links_core.Parse.program content in *)
-  (* let _ = Linxer.Phases.evaluate_string (get_init_context ()) content in *)
-  let testing = new prepare_rename_traversal content in
+  let ast_foldr = new prepare_rename_traversal content in
   let ast = Linxer.Phases.Parse.string (get_init_context ()) content in
-  let _ = testing#program ast.program_ in
-  ();
-  testing#pp_phrase_positions ();
-  (* let pos, s1, s2 = source_code#lookup (p.position.line, p.position.character) in *)
-  `String ""
+  let _ = ast_foldr#program ast.program_ in
+  let r =
+    ast_foldr#is_inside { line = p.position.line + 1; col = p.position.character + 1 }
+  in
+  match r with
+  | Some (s, f) ->
+    let start = Types.Position.create ~character:(s.col - 1) ~line:(s.line - 1) in
+    let finish = Types.Position.create ~character:(f.col - 1) ~line:(f.line - 1) in
+    let range = Types.Range.create ~end_:finish ~start in
+    Types.Range.yojson_of_t range
+  | None -> `Null
 ;;
+
+(* let pos, s1, s2 = source_code#lookup (p.position.line, p.position.character) in *)
 
 (** TESTS *)
 
@@ -245,15 +265,46 @@ page
 (*   [%expect {| |}] *)
 (* ;; *)
 
+let read_whole_file filename =
+  (* open_in_bin works correctly on Unix and Windows *)
+  let ch = open_in_bin filename in
+  let s = really_input_string ch (in_channel_length ch) in
+  close_in ch;
+  s
+;;
+
 let%expect_test "prepare_rename3" =
   let _filepath =
     "/home/brandon/doc/uni/5th_year/diss/links/examples/silly-progress.links"
+    (* "/home/brandon/doc/uni/5th_year/diss/links/examples/date.links" *)
   in
-  let testing = new prepare_rename_traversal content in
+  let testing = new prepare_rename_traversal (read_whole_file _filepath) in
   let ast = Links_core.Loader.load (get_init_context ()) _filepath in
   let _ = testing#program ast.program_ in
   ();
   testing#pp_phrase_positions ();
+  (* print_endline (Links_core.Sugartypes.show_program ast.program_); *)
+  print_endline (string_of_bool (testing#is_inside { line = 1; col = 16 }));
+  let test =
+    is_within_range { line = 1; col = 5 } { line = 1; col = 16 } { line = 1; col = 8 }
+  in
+  (match test with
+   | Inside -> print_endline "Inside"
+   | After -> print_endline "After"
+   | Before -> print_endline "Before");
+  [%expect {| |}]
+;;
+
+let%expect_test "prepare_rename4" =
+  let _filepath =
+    "/home/brandon/doc/uni/5th_year/diss/links/examples/silly-progress.links"
+    (* "/home/brandon/doc/uni/5th_year/diss/links/examples/date.links" *)
+  in
+  (* let testing = new prepare_rename_traversal content in *)
+  let ast = Links_core.Loader.load (get_init_context ()) _filepath in
+  (* let _ = testing#program ast.program_ in *)
+  (* (); *)
+  (* testing#pp_phrase_positions (); *)
   print_endline (Links_core.Sugartypes.show_program ast.program_);
   [%expect {| |}]
 ;;
