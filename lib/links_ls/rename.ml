@@ -1,4 +1,4 @@
-open Links_lsp.Common
+(* open Links_lsp.Common *)
 open Lsp
 open Global
 open Document_state
@@ -103,8 +103,8 @@ class prepare_rename_traversal content =
       in
       aux self#get_phrase_positions
 
-    method printer = log_to_file
-    (* method printer = print_endline *)
+    (* method printer = log_to_file *)
+    method printer = print_endline
 
     method pp_phrase_positions () =
       let open Links_core.Sugartypes in
@@ -169,8 +169,6 @@ class prepare_rename_traversal content =
 
 (* TODO: Make return result for some failure cases *)
 let prepare_rename (p : Types.PrepareRenameParams.t) =
-  log_to_file
-    ("#######" ^ string_of_int p.position.line ^ ", " ^ string_of_int p.position.character);
   let doc = get_document p.textDocument.uri in
   let content =
     match doc with
