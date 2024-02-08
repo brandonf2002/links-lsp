@@ -118,6 +118,8 @@ let rec main_loop channel =
 ;;
 
 let run channel =
+  log_to_file "Server not initialized";
   initialize channel;
+  log_to_file "Server initialized";
   main_loop channel
 ;;

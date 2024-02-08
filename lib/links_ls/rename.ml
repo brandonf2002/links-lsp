@@ -83,6 +83,7 @@ class prepare_rename_traversal content =
     method add_phrase_position i = phrase_positions <- i :: phrase_positions
 
     method is_inside pos =
+      let pos = { line = pos.line + 1; col = pos.col + 1 } in
       let rec aux positions =
         match positions with
         | x :: xs ->
@@ -168,6 +169,8 @@ class prepare_rename_traversal content =
 
 (* TODO: Make return result for some failure cases *)
 let prepare_rename (p : Types.PrepareRenameParams.t) =
+  log_to_file
+    ("#######" ^ string_of_int p.position.line ^ ", " ^ string_of_int p.position.character);
   let doc = get_document p.textDocument.uri in
   let content =
     match doc with
@@ -177,9 +180,7 @@ let prepare_rename (p : Types.PrepareRenameParams.t) =
   let ast_foldr = new prepare_rename_traversal content in
   let ast = Linxer.Phases.Parse.string (get_init_context ()) content in
   let _ = ast_foldr#program ast.program_ in
-  let r =
-    ast_foldr#is_inside { line = p.position.line + 1; col = p.position.character + 1 }
-  in
+  let r = ast_foldr#is_inside { line = p.position.line; col = p.position.character } in
   match r with
   | Some (s, f) ->
     let start = Types.Position.create ~character:(s.col - 1) ~line:(s.line - 1) in
@@ -193,121 +194,70 @@ let prepare_rename (p : Types.PrepareRenameParams.t) =
 
 (** TESTS *)
 
-let content2 =
-  {|
-fun g() client {
-  println("!")
-}
-
-fun f() server {
-  <b l:onmousedown="{g()}">world</b>
-}
-
-page
-  <html>
-    <body>
-      <b l:onmousedown="{replaceNode(f(), getNodeById("hole"))}">hello</b>
-      <div><div id="hole">to be replaced</div></div>
-    </body>
-  </html>
-    |}
-;;
-
-let content =
-  {|
-fun computeStep(count) server {
- count+1
-}
-
-fun showProgress(count, total) client {
- var percent = 100.0 *. intToFloat(count) /. intToFloat(total);
- replaceNode(
-        <div id="bar"
-             style="width:{floatToString(percent)}%;
-                    background-color: black">|</div>,
-        getNodeById("bar")
- )
-}
-
-fun compute(count, total) client {
- if (count < total) {
-  showProgress(count, total);
-  compute(computeStep(count), total)
- } else "done counting to " ^^ intToString(total)
-}
-
-fun showAnswer(answer) client {
- replaceNode(
-    <div id="bar">{stringToXml(answer)}</div>,
-        getNodeById("bar")
-    )
-}
-
-page
- <html>
-  <body>
-   <form l:onsubmit="{showAnswer(compute(0, stringToInt(n)))}">
-    <input type="text" l:name="n"/>
-    <input type="submit"/>
-   </form>
-   <div id="bar"/>
-  </body>
- </html>|}
-;;
-
-(* let%expect_test "prepare_rename" = *)
-(*   let testing = new prepare_rename_traversal content in *)
-(*   let ast = Linxer.Phases.Parse.string (get_init_context ()) content in *)
-(*   let _ = testing#program ast.program_ in *)
-(*   (); *)
-(*   (1* testing#pp_phrase_positions (); *1) *)
-(*   (1* print_endline (Links_core.Sugartypes.show_program ast.program_); *1) *)
-(*   [%expect {| |}] *)
-(* ;; *)
-
 let read_whole_file filename =
-  (* open_in_bin works correctly on Unix and Windows *)
   let ch = open_in_bin filename in
   let s = really_input_string ch (in_channel_length ch) in
   close_in ch;
   s
 ;;
 
-let%expect_test "prepare_rename3" =
-  let _filepath =
-    "/home/brandon/doc/uni/5th_year/diss/links/examples/silly-progress.links"
-    (* "/home/brandon/doc/uni/5th_year/diss/links/examples/date.links" *)
-  in
-  let testing = new prepare_rename_traversal (read_whole_file _filepath) in
-  let ast = Links_core.Loader.load (get_init_context ()) _filepath in
-  let _ = testing#program ast.program_ in
-  ();
-  testing#pp_phrase_positions ();
-  (* print_endline (Links_core.Sugartypes.show_program ast.program_); *)
-  print_endline (string_of_bool (testing#is_inside { line = 1; col = 16 }));
-  let test =
-    is_within_range { line = 1; col = 5 } { line = 1; col = 16 } { line = 1; col = 8 }
-  in
-  (match test with
-   | Inside -> print_endline "Inside"
-   | After -> print_endline "After"
-   | Before -> print_endline "Before");
-  [%expect {| |}]
+let rec find_root dir =
+  let parent = Filename.dirname dir in
+  if parent = dir
+  then failwith "Reached filesystem root without finding _build"
+  else if Filename.basename dir = "_build"
+  then parent (* Found the _build dir, return its parent *)
+  else find_root parent
 ;;
 
-let%expect_test "prepare_rename4" =
-  let _filepath =
-    "/home/brandon/doc/uni/5th_year/diss/links/examples/silly-progress.links"
-    (* "/home/brandon/doc/uni/5th_year/diss/links/examples/date.links" *)
+let testing_dir () = find_root (Sys.getcwd ()) ^ "/test/test_programs"
+
+let%expect_test "prepare_rename_function" =
+  let file1 = testing_dir () ^ "/silly-progress.links" in
+  let file2 = testing_dir () ^ "/date.links" in
+  let ast1 = Links_core.Loader.load (get_init_context ()) file1 in
+  let ast2 = Links_core.Loader.load (get_init_context ()) file2 in
+  let ast1_walker = new prepare_rename_traversal (read_whole_file file1) in
+  let ast2_walker = new prepare_rename_traversal (read_whole_file file2) in
+  let _ = ast1_walker#program ast1.program_ in
+  let _ = ast2_walker#program ast2.program_ in
+  let char_before_function_signature = { line = 0; col = 3 } in
+  let first_char_function_signature = { line = 0; col = 4 } in
+  let last_char_function_signature = { line = 0; col = 14 } in
+  let char_after_function_signature = { line = 0; col = 15 } in
+  let print_is_inside pos =
+    match ast1_walker#is_inside pos with
+    | Some _ -> print_endline "Can rename"
+    | None -> print_endline "Cannot rename"
   in
-  (* let testing = new prepare_rename_traversal content in *)
-  let ast = Links_core.Loader.load (get_init_context ()) _filepath in
-  (* let _ = testing#program ast.program_ in *)
-  (* (); *)
-  (* testing#pp_phrase_positions (); *)
-  print_endline (Links_core.Sugartypes.show_program ast.program_);
-  [%expect {| |}]
+  print_is_inside char_before_function_signature;
+  print_is_inside first_char_function_signature;
+  print_is_inside last_char_function_signature;
+  print_is_inside char_after_function_signature;
+  [%expect {|
+    Cannot rename
+    Can rename
+    Can rename
+    Cannot rename |}];
+  (* let positions_to_test = [ { line = 0; col = 3 }, false; { line = 0; col = 4 }, true ] in *)
+  (* let test_positions positions_to_test = *)
+  (*   let aux *)
+  ()
 ;;
+
+(* let%expect_test "prepare_rename4" = *)
+(*   let _filepath = *)
+(*     "/home/brandon/doc/uni/5th_year/diss/links/examples/silly-progress.links" *)
+(*     (1* "/home/brandon/doc/uni/5th_year/diss/links/examples/date.links" *1) *)
+(*   in *)
+(*   (1* let testing = new prepare_rename_traversal content in *1) *)
+(*   let ast = Links_core.Loader.load (get_init_context ()) _filepath in *)
+(*   (1* let _ = testing#program ast.program_ in *1) *)
+(*   (1* (); *1) *)
+(*   (1* testing#pp_phrase_positions (); *1) *)
+(*   print_endline (Links_core.Sugartypes.show_program ast.program_); *)
+(*   [%expect {| |}] *)
+(* ;; *)
 
 (* let%expect_test "prepare_rename_2" = *)
 (*   let ast = Linxer.Phases.Parse.string (get_init_context ()) content in *)
