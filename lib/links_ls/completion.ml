@@ -52,7 +52,9 @@ class prepare_rename_traversal =
       super#pattern p
 
     method! name n =
-      let _ = self#add_completion_item n in
+      (match get_item items n with
+       | Some _ -> ()
+       | None -> add_item n ~kind:Types.CompletionItemKind.Text);
       super#name n
 
     method! binder n = super#binder n
@@ -60,6 +62,19 @@ class prepare_rename_traversal =
   end
 
 let complation (r : Types.CompletionParams.t) =
+  let ast_foldr = new prepare_rename_traversal in
+  let context =
+    Links_core.Context.
+      { empty with
+        name_environment = Links_core.Lib.nenv
+      ; typing_environment = Links_core.Lib.typing_env
+      }
+  in
+  let filename =
+    Links_core.Utility.val_of (Links_core.Settings.get Linxer.prelude_file)
+  in
+  let result = Linxer.Phases.Parse.run context filename in
+  let _ = ast_foldr#program result.program_ in
   let line, col = r.position.line, r.position.character in
   log_to_file (string_of_int line ^ " " ^ string_of_int col);
   let doc = get_document r.textDocument.uri in
@@ -71,7 +86,6 @@ let complation (r : Types.CompletionParams.t) =
   match ast with
   | None -> `Null
   | Some a ->
-    let ast_foldr = new prepare_rename_traversal in
     let _ = ast_foldr#program a.program_ in
     let item_list =
       ItemTable.fold
