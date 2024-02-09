@@ -163,7 +163,10 @@ class prepare_rename_traversal content =
       super#pattern p
 
     method! name n = super#name n
-    method! binder n = super#binder n
+
+    method! binder n = (*   match n.node with *)
+                       super#binder n
+
     method! phrasenode p = super#phrasenode p
   end
 
