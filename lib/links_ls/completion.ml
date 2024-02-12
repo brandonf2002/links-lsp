@@ -16,9 +16,9 @@ let items = ItemTable.create 10
 let remove_item i = ItemTable.remove i
 let get_item i = ItemTable.find_opt i
 
-let rec add_item name ?(kind = Types.CompletionItemKind.Text) =
+let rec add_item ?(kind = Types.CompletionItemKind.Text) name =
   match get_item items name with
-  | Some i ->
+  | Some _ ->
     remove_item items name;
     add_item name ~kind
   | None -> ItemTable.add items name { kind }
@@ -27,7 +27,7 @@ let rec add_item name ?(kind = Types.CompletionItemKind.Text) =
 module StringSet = Set.Make (String)
 
 class prepare_rename_traversal =
-  object (self : 'self_type)
+  object (_ : 'self_type)
     inherit Links_core.SugarTraversals.fold as super
     val mutable completion_items = StringSet.empty
     method get_completion_items = completion_items
@@ -52,14 +52,51 @@ class prepare_rename_traversal =
       super#pattern p
 
     method! name n =
-      (match get_item items n with
-       | Some _ -> ()
-       | None -> add_item n ~kind:Types.CompletionItemKind.Text);
+      (* (match get_item items n with *)
+      (*  | Some _ -> () *)
+      (*  | None -> add_item n ~kind:Types.CompletionItemKind.Text); *)
       super#name n
 
     method! binder n = super#binder n
     method! phrasenode p = super#phrasenode p
   end
+
+let get_lib_functions () =
+  let types =
+    Links_core.Env.String.fold
+      (fun str t acc -> (str, t) :: acc)
+      Links_core.Lib.type_env
+      []
+  in
+  (* let _ = *)
+  (*   List.iter *)
+  (*     (fun (s, t) -> print_endline (s ^ ":---- " ^ Types.string_of_datatype t)) *)
+  (*     types *)
+  (* in *)
+  (* log_to_file (Links_core.Types.string_of_environment Links_core.Lib.type_env); *)
+  let _ =
+    List.iter
+      (fun (s, t) ->
+        (* let _ = print_endline (s ^ ": " ^ Links_core.Types.string_of_datatype t) in *)
+        (* (match t with *)
+        (*  | Links_core.Types.Var _ -> print_endline "VAR" *)
+        (*  | Links_core.Types.Function _ -> print_endline "FUN" *)
+        (*  | _ -> ()); *)
+        match t with
+        | Links_core.Types.ForAll (_, tt) ->
+          (match tt with
+           | Links_core.Types.Var _ -> add_item s ~kind:Types.CompletionItemKind.Variable
+           | Links_core.Types.Function _ ->
+             add_item s ~kind:Types.CompletionItemKind.Function
+           | _ -> ())
+          (* add_item s ~kind:Types.CompletionItemKind.Variable *)
+        | Links_core.Types.Primitive _ ->
+          add_item s ~kind:Types.CompletionItemKind.Constant
+        | _ -> ())
+      types
+  in
+  ()
+;;
 
 let complation (r : Types.CompletionParams.t) =
   let ast_foldr = new prepare_rename_traversal in
@@ -75,6 +112,7 @@ let complation (r : Types.CompletionParams.t) =
   in
   let result = Linxer.Phases.Parse.run context filename in
   let _ = ast_foldr#program result.program_ in
+  get_lib_functions ();
   let line, col = r.position.line, r.position.character in
   log_to_file (string_of_int line ^ " " ^ string_of_int col);
   let doc = get_document r.textDocument.uri in
@@ -138,8 +176,17 @@ let%expect_test "add to completion set" =
 let%expect_test "Kind Info" =
   let file1 = testing_dir () ^ "/silly-progress.links" in
   let ast = Links_core.Loader.load (get_init_context ()) file1 in
+  let ast = Linxer.Phases.Desugar.run ast in
+  (* let _ = print_endline (Links_core.Sugartypes.show_program ast.program) in *)
+  (* Print all of the types and their str using Types.string_of_datatype *)
+  get_lib_functions ();
+  (* let _ = *)
+  (*   List.iter *)
+  (*     (fun (s, t) -> print_endline (s ^ ":---- " ^ Types.string_of_datatype t)) *)
+  (*     types *)
+  (* in *)
   let ast1_walker = new prepare_rename_traversal in
-  let _ = ast1_walker#program ast.program_ in
+  let _ = ast1_walker#program ast.program in
   [%expect {| |}];
   ()
 ;;
