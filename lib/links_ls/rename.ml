@@ -1,4 +1,4 @@
-(* open Links_lsp.Common *)
+open Links_lsp.Common
 open Lsp
 open Global
 open Document_state
@@ -180,6 +180,7 @@ let prepare_rename (p : Types.PrepareRenameParams.t) =
   in
   let ast_foldr = new prepare_rename_traversal content in
   let ast = Linxer.Phases.Parse.string (get_init_context ()) content in
+  log_to_file "Preparing to rename";
   let _ = ast_foldr#program ast.program_ in
   let r = ast_foldr#is_inside { line = p.position.line; col = p.position.character } in
   match r with

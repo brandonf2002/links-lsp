@@ -126,7 +126,10 @@ let rec main_loop channel =
   main_loop channel
 ;;
 
+let precompute_data () = Completion.init_item_table ()
+
 let run channel =
   initialize channel;
+  precompute_data ();
   main_loop channel
 ;;

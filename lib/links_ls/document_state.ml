@@ -1,3 +1,5 @@
+open Global
+
 type t =
   { uri : Lsp.Types.DocumentUri.t
   ; version : int
@@ -23,12 +25,23 @@ let add_document doc =
 
 let update_document uri new_content new_version =
   current_uri := Some uri;
+  let ast =
+    try Some (Linxer.Phases.Parse.string (get_init_context ()) new_content) with
+    | _ -> None
+  in
   match DocumentTable.find_opt documents uri with
   | Some doc ->
-    DocumentTable.replace
-      documents
-      uri
-      { doc with content = new_content; version = new_version }
+    (match ast with
+     | Some _ ->
+       DocumentTable.replace
+         documents
+         uri
+         { doc with content = new_content; version = new_version; ast }
+     | _ ->
+       DocumentTable.replace
+         documents
+         uri
+         { doc with content = new_content; version = new_version })
   | None -> failwith "Document not found"
 ;;
 

@@ -49,7 +49,6 @@ let specs =
 let _ =
   Arg.parse specs (fun _ -> ()) "Usage: links_lsp [options]";
   write_to_file "Starting Server\n" "/home/brandon/LSP_test";
-  (* let _ = Global.get_init_context () in *)
   Ls.run channel;
   exit 0
 ;;
