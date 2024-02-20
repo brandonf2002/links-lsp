@@ -1,6 +1,7 @@
 open Lsp
 open Document_state
-open Links_lsp.Common
+
+(* open Links_lsp.Common *)
 open Global
 
 type item_info =
@@ -22,11 +23,12 @@ type item_table_with_temp_list =
 
 let item_table = { table = ItemTable.create 100; temporary_items = [] }
 
-let rec add_item ?(kind = Types.CompletionItemKind.Text) ?(detail = "") name is_temp_item =
+let rec add_item ?(kind = Types.CompletionItemKind.Text) ?(detail = "") ~is_temp_item name
+  =
   match ItemTable.find_opt item_table.table name with
   | Some _ ->
     ItemTable.remove item_table.table name;
-    add_item name is_temp_item ~kind ~detail
+    add_item name ~is_temp_item ~kind ~detail
   | None ->
     ItemTable.add item_table.table name { kind; detail };
     if is_temp_item then item_table.temporary_items <- name :: item_table.temporary_items
@@ -37,22 +39,27 @@ let remove_temp_items () =
   item_table.temporary_items <- []
 ;;
 
-module StringSet = Set.Make (String)
+let untyped_tbl = Hashtbl.create 1000
 
-class completion_traversal is_temp_item =
-  object (_ : 'self_type)
+class completion_traversal ~is_temp_item ~has_types =
+  object (self : 'self_type)
     inherit Links_core.SugarTraversals.fold as super
 
     (* method printer = log_to_file *)
     method printer = print_endline
 
+    method add_item ?kind ?detail name =
+      match has_types with
+      | true ->
+        if Hashtbl.mem untyped_tbl name then add_item ?kind ?detail name ~is_temp_item
+      | false -> Hashtbl.add untyped_tbl name ()
+
     method! binding b =
       let open Links_core.Sugartypes in
       (match b.node with
        | Fun f ->
-         add_item
+         self#add_item
            (Binder.to_name f.fun_binder)
-           is_temp_item
            ~kind:Types.CompletionItemKind.Function
            ~detail:(Links_core.Types.string_of_datatype (Binder.to_type f.fun_binder))
        | _ -> ());
@@ -62,14 +69,14 @@ class completion_traversal is_temp_item =
       let open Links_core.Sugartypes in
       (match p.node with
        | Variable v ->
-         add_item
+         self#add_item
            (Binder.to_name v)
-           is_temp_item
            ~kind:Types.CompletionItemKind.Variable
            ~detail:(Links_core.Types.string_of_datatype (Binder.to_type v))
        | _ -> ());
       super#pattern p
 
+    method! program p = super#program p
     method! name n = super#name n
     method! binder n = super#binder n
     method! phrasenode p = super#phrasenode p
@@ -89,11 +96,11 @@ let get_lib_functions () =
         | Links_core.Types.ForAll (_, tt) ->
           (match tt with
            | Links_core.Types.Var _ ->
-             add_item s false ~kind:Types.CompletionItemKind.Variable
+             add_item s ~is_temp_item:false ~kind:Types.CompletionItemKind.Variable
            | Links_core.Types.Function _ ->
              add_item
                s
-               false
+               ~is_temp_item:false
                ~kind:Types.CompletionItemKind.Function
                ~detail:(Links_core.Types.string_of_datatype t)
            | _ -> ())
@@ -101,7 +108,7 @@ let get_lib_functions () =
         | Links_core.Types.Primitive _ ->
           add_item
             s
-            false
+            ~is_temp_item:false
             ~kind:Types.CompletionItemKind.Constant
             ~detail:(Links_core.Types.string_of_datatype t)
         | _ -> ())
@@ -111,7 +118,7 @@ let get_lib_functions () =
 ;;
 
 let init_item_table () =
-  let ast_foldr = new completion_traversal false in
+  let ast_foldr = new completion_traversal ~is_temp_item:false ~has_types:false in
   let context =
     Links_core.Context.
       { empty with
@@ -123,16 +130,18 @@ let init_item_table () =
     Links_core.Utility.val_of (Links_core.Settings.get Linxer.prelude_file)
   in
   let result = Linxer.Phases.Parse.run context filename in
+  let _ = ast_foldr#program result.program_ in
+  let ast_foldr = new completion_traversal ~is_temp_item:false ~has_types:true in
   let result = Linxer.Phases.Desugar.run result in
   let _ = ast_foldr#program result.program in
   get_lib_functions ();
+  Hashtbl.clear untyped_tbl;
   List.iter
-    (fun n -> add_item (fst n) false ~kind:Types.CompletionItemKind.Keyword)
+    (fun n -> add_item (fst n) ~is_temp_item:false ~kind:Types.CompletionItemKind.Keyword)
     Links_core.Lexer.keywords
 ;;
 
 let complation (r : Types.CompletionParams.t) =
-  let ast_foldr = new completion_traversal true in
   let doc = get_document r.textDocument.uri in
   let ast =
     match doc with
@@ -142,8 +151,11 @@ let complation (r : Types.CompletionParams.t) =
   match ast with
   | None -> `Null
   | Some a ->
-    (* let desugared_ast = Linxer.Phases.Desugar.run a in *)
+    let ast_foldr = new completion_traversal ~is_temp_item:true ~has_types:false in
     let _ = ast_foldr#program a.program_ in
+    let a = Linxer.Phases.Desugar.run a in
+    let ast_foldr = new completion_traversal ~is_temp_item:true ~has_types:true in
+    let _ = ast_foldr#program a.program in
     let item_list =
       ItemTable.fold
         (fun s info acc ->
@@ -153,6 +165,7 @@ let complation (r : Types.CompletionParams.t) =
         []
     in
     remove_temp_items ();
+    Hashtbl.clear untyped_tbl;
     let ret = Types.CompletionList.create ~isIncomplete:false ~items:item_list () in
     Types.CompletionList.yojson_of_t ret
 ;;
@@ -171,30 +184,23 @@ let rec find_root dir =
 let testing_dir () = find_root (Sys.getcwd ()) ^ "/test/test_programs"
 
 let%expect_test "Kind Info" =
-  (* let file1 = testing_dir () ^ "/date.links" in *)
-  let file1 =
-    "/home/brandon/doc/uni/5th_year/diss/links/examples/sessions/linear_if.links"
+  init_item_table ();
+  let file1 = testing_dir () ^ "/silly-progress.links" in
+  let a = Links_core.Loader.load (get_init_context ()) file1 in
+  let ast_foldr = new completion_traversal ~is_temp_item:true ~has_types:false in
+  let _ = ast_foldr#program a.program_ in
+  (* print_endline (Links_core.Sugartypes.show_program a.program_); *)
+  let a = Linxer.Phases.Desugar.run a in
+  let ast_foldr = new completion_traversal ~is_temp_item:true ~has_types:true in
+  let _ = ast_foldr#program a.program in
+  let _ =
+    ItemTable.fold
+      (fun s info acc ->
+        print_endline (s ^ " : " ^ info.detail);
+        Types.CompletionItem.create ~label:s ~kind:info.kind ~detail:info.detail () :: acc)
+      item_table.table
+      []
   in
-  let ast = Links_core.Loader.load (get_init_context ()) file1 in
-  (* let ast = Linxer.Phases.Desugar.run ast in *)
-  (* let _ = print_endline (Links_core.Sugartypes.show_program ast.program) in *)
-  (* Print all of the types and their str using Types.string_of_datatype *)
-  (* get_lib_functions (); *)
-  (* let _ = *)
-  (*   List.iter *)
-  (*     (fun (s, t) -> print_endline (s ^ ":---- " ^ Types.string_of_datatype t)) *)
-  (*     types *)
-  (* in *)
-  (* let ast1_walker = new prepare_rename_traversal in *)
-  (* let _ = ast1_walker#program ast.program in *)
-  print_endline (Links_core.Sugartypes.show_program ast.program_);
-  (* let item_list = *)
-  (*   ItemTable.fold *)
-  (*     (fun s info acc -> *)
-  (*       Types.CompletionItem.create ~label:s ~kind:info.kind ~detail:info.detail () :: acc) *)
-  (*     items *)
-  (*     [] *)
-  (* in *)
   [%expect {| |}];
   ()
 ;;
