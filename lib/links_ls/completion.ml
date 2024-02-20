@@ -143,19 +143,19 @@ let init_item_table () =
 
 let complation (r : Types.CompletionParams.t) =
   let doc = get_document r.textDocument.uri in
-  let ast =
+  let parsed_ast, desugared_ast =
     match doc with
-    | None -> None
-    | Some v -> v.ast
+    | None -> None, None
+    | Some v -> v.parsed_ast, v.desugared_ast
   in
-  match ast with
-  | None -> `Null
-  | Some a ->
+  match parsed_ast, desugared_ast with
+  | None, _ -> `Null
+  | _, None -> `Null
+  | Some a, Some b ->
     let ast_foldr = new completion_traversal ~is_temp_item:true ~has_types:false in
     let _ = ast_foldr#program a.program_ in
-    let a = Linxer.Phases.Desugar.run a in
     let ast_foldr = new completion_traversal ~is_temp_item:true ~has_types:true in
-    let _ = ast_foldr#program a.program in
+    let _ = ast_foldr#program b.program in
     let item_list =
       ItemTable.fold
         (fun s info acc ->
