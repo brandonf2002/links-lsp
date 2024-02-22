@@ -1,9 +1,12 @@
+open Global
+
 type t =
   { uri : Lsp.Types.DocumentUri.t
   ; version : int
   ; content : string
   ; language_id : string
-  ; ast : Links_core.Sugartypes.program Links_core.Loader.result option
+  ; parsed_ast : Links_core.Sugartypes.program Links_core.Loader.result option
+  ; desugared_ast : Links_core.Sugartypes.program Links_core.Frontend.result option
   }
 
 module DocumentTable = Hashtbl.Make (struct
@@ -23,12 +26,45 @@ let add_document doc =
 
 let update_document uri new_content new_version =
   current_uri := Some uri;
+  let parsed_ast =
+    try Some (Linxer.Phases.Parse.string (get_init_context ()) new_content) with
+    | _ -> None
+  in
+  let desugared_ast =
+    try
+      match parsed_ast with
+      | Some ast -> Some (Linxer.Phases.Desugar.run ast)
+      | _ -> None
+    with
+    | _ -> None
+  in
+  (* TODO: This is horrible, it's just trying to keep some ASTs for
+     completion when the document is updated to an unparsable state *)
   match DocumentTable.find_opt documents uri with
   | Some doc ->
-    DocumentTable.replace
-      documents
-      uri
-      { doc with content = new_content; version = new_version }
+    (match parsed_ast with
+     | Some _ ->
+       (match desugared_ast with
+        | Some _ ->
+          DocumentTable.replace
+            documents
+            uri
+            { doc with
+              content = new_content
+            ; version = new_version
+            ; parsed_ast
+            ; desugared_ast
+            }
+        | _ ->
+          DocumentTable.replace
+            documents
+            uri
+            { doc with content = new_content; version = new_version; parsed_ast })
+     | _ ->
+       DocumentTable.replace
+         documents
+         uri
+         { doc with content = new_content; version = new_version })
   | None -> failwith "Document not found"
 ;;
 
@@ -53,15 +89,6 @@ let parse_doc_string () : string =
   with
   | e -> Links_core.Errors.format_exception e
 ;;
-
-(* let parse_doc_whole () : string = *)
-(*   let x = Linxer.Phases.initialise () in *)
-(*   let doc = DocumentTable.find documents (Option.get !current_uri) in *)
-(*   try *)
-(*     let context = Linxer.Phases.evaluate_string x (doc.content) in *)
-(*     let y = context.program in *)
-(*     Links_core.Sugartypes.show_program y *)
-(*   with e -> Links_core.Errors.format_exception e *)
 
 let format_documents () : string =
   let buffer = Buffer.create 256 in

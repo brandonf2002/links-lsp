@@ -2,7 +2,10 @@ open Links_lsp.Common
 open Jsonrpc2.Jsonrpc
 open Common
 open Text_document
+
+(*  *)
 open Rename
+open Completion
 
 (* [%%if TEST] *)
 
@@ -30,8 +33,13 @@ let do_initialize channel (r : Request.t) =
          ~willSaveWaitUntil:false
          ())
   in
+  let completionProvider =
+    CompletionOptions.create ~triggerCharacters:[ "." ] ~resolveProvider:false ()
+  in
   let renameProvider = `RenameOptions (RenameOptions.create ~prepareProvider:true ()) in
-  let capabilities = ServerCapabilities.create ~textDocumentSync ~renameProvider () in
+  let capabilities =
+    ServerCapabilities.create ~textDocumentSync ~renameProvider ~completionProvider ()
+  in
   let init_result = InitializeResult.create ~capabilities ~serverInfo () in
   let msg = Response.ok r.id (InitializeResult.yojson_of_t init_result) in
   write_message channel msg
@@ -100,7 +108,8 @@ let handle_request channel (r : Request.t) =
        (* TODO -> Change these functions to return the Result type of these *)
        (*         This will make it look cleaner and means we can return error from rename *)
        | E Shutdown -> Result.ok (shutdown ())
-       | E (TextDocumentPrepareRename params) -> Result.ok (prepare_rename params)
+       | E (TextDocumentPrepareRename p) -> Result.ok (prepare_rename p)
+       | E (TextDocumentCompletion p) -> Result.ok (complation p)
        | _ -> Result.error (default_fail_response ~error:"Hello world!" ()))
   in
   write_message channel { id = r.id; result }
@@ -117,9 +126,10 @@ let rec main_loop channel =
   main_loop channel
 ;;
 
+let precompute_data () = Completion.init_item_table ()
+
 let run channel =
-  log_to_file "Server not initialized";
   initialize channel;
-  log_to_file "Server initialized";
+  precompute_data ();
   main_loop channel
 ;;

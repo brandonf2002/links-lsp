@@ -3,7 +3,8 @@ type t =
   ; version : int
   ; content : string
   ; language_id : string
-  ; ast : Links_core.Sugartypes.program Links_core.Loader.result option
+  ; parsed_ast : Links_core.Sugartypes.program Links_core.Loader.result option
+  ; desugared_ast : Links_core.Sugartypes.program Links_core.Frontend.result option
   }
 
 val add_document : t -> unit

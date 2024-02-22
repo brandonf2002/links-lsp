@@ -103,8 +103,8 @@ class prepare_rename_traversal content =
       in
       aux self#get_phrase_positions
 
-    method printer = log_to_file
-    (* method printer = print_endline *)
+    (* method printer = log_to_file *)
+    method printer = print_endline
 
     method pp_phrase_positions () =
       let open Links_core.Sugartypes in
@@ -163,14 +163,15 @@ class prepare_rename_traversal content =
       super#pattern p
 
     method! name n = super#name n
-    method! binder n = super#binder n
+
+    method! binder n = (*   match n.node with *)
+                       super#binder n
+
     method! phrasenode p = super#phrasenode p
   end
 
 (* TODO: Make return result for some failure cases *)
 let prepare_rename (p : Types.PrepareRenameParams.t) =
-  log_to_file
-    ("#######" ^ string_of_int p.position.line ^ ", " ^ string_of_int p.position.character);
   let doc = get_document p.textDocument.uri in
   let content =
     match doc with
@@ -179,6 +180,7 @@ let prepare_rename (p : Types.PrepareRenameParams.t) =
   in
   let ast_foldr = new prepare_rename_traversal content in
   let ast = Linxer.Phases.Parse.string (get_init_context ()) content in
+  log_to_file "Preparing to rename";
   let _ = ast_foldr#program ast.program_ in
   let r = ast_foldr#is_inside { line = p.position.line; col = p.position.character } in
   match r with

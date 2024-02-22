@@ -4,20 +4,27 @@ open Global
 open Document_state
 
 let did_open (p : Client_notification.t) =
-  (* let ast = *)
-  (* in *)
   match p with
   | TextDocumentDidOpen p ->
+    let parsed_ast =
+      try Some (Linxer.Phases.Parse.string (get_init_context ()) p.textDocument.text) with
+      | _ -> None
+    in
+    let desugared_ast =
+      try
+        match parsed_ast with
+        | Some ast -> Some (Linxer.Phases.Desugar.run ast)
+        | _ -> None
+      with
+      | _ -> None
+    in
     add_document
       { uri = p.textDocument.uri
       ; version = p.textDocument.version
       ; language_id = p.textDocument.languageId
       ; content = p.textDocument.text
-      ; ast =
-          (try
-             Some (Linxer.Phases.Parse.string (get_init_context ()) p.textDocument.text)
-           with
-           | _ -> None)
+      ; parsed_ast
+      ; desugared_ast
       }
   | _ -> failwith "Unreachable"
 ;;
