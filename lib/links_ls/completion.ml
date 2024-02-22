@@ -21,7 +21,7 @@ type item_table_with_temp_list =
   ; mutable temporary_items : string list
   }
 
-let item_table = { table = ItemTable.create 100; temporary_items = [] }
+let item_table = { table = ItemTable.create 1000; temporary_items = [] }
 
 let rec add_item ?(kind = Types.CompletionItemKind.Text) ?(detail = "") ~is_temp_item name
   =
@@ -185,11 +185,14 @@ let testing_dir () = find_root (Sys.getcwd ()) ^ "/test/test_programs"
 
 let%expect_test "Kind Info" =
   init_item_table ();
-  let file1 = testing_dir () ^ "/silly-progress.links" in
+  (* let file1 = testing_dir () ^ "/silly-progress.links" in *)
+  let file1 =
+    "/home/brandon/doc/uni/5th_year/diss/links/examples/sessions/linear_if.links"
+  in
   let a = Links_core.Loader.load (get_init_context ()) file1 in
   let ast_foldr = new completion_traversal ~is_temp_item:true ~has_types:false in
   let _ = ast_foldr#program a.program_ in
-  (* print_endline (Links_core.Sugartypes.show_program a.program_); *)
+  print_endline (Links_core.Sugartypes.show_program a.program_);
   let a = Linxer.Phases.Desugar.run a in
   let ast_foldr = new completion_traversal ~is_temp_item:true ~has_types:true in
   let _ = ast_foldr#program a.program in
