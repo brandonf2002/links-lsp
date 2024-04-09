@@ -6,12 +6,7 @@ open Text_document
 (*  *)
 open Rename
 open Completion
-
-(* [%%if TEST] *)
-
-(* let get_value = 10 (1* Test code here *1) *)
-
-(* [%%endif] *)
+open Diagnostics
 
 let server_not_initialzed ?(id = `Int 0) () =
   get_error_response ServerNotInitialized "Sernver not initialized" id
@@ -76,7 +71,7 @@ let rec initialize channel =
 (* Just keeping this here as we might want to do more complex things with the shutdown process later to kill/save things *)
 let shutdown () = `Null
 
-let handle_notification (n : Notification.t) =
+let handle_notification channel (n : Notification.t) =
   let open Lsp.Client_notification in
   let params = of_jsonrpc n in
   match params with
@@ -84,7 +79,9 @@ let handle_notification (n : Notification.t) =
     (match n.method_ with
      | "exit" -> exit 0
      | "textDocument/didOpen" -> did_open p
-     | "textDocument/didChange" -> did_change p
+     | "textDocument/didChange" ->
+       let uri = did_change p in
+       diagnostic_notification uri "hello" channel
      | "textDocument/didClose" -> did_close p
      | _ ->
        prerr_endline "Not imlemented yet (Notif)";
@@ -119,7 +116,7 @@ let rec main_loop channel =
   let packet = read_message channel in
   (match packet with
    | Request r -> handle_request channel r
-   | Notification r -> handle_notification r
+   | Notification r -> handle_notification channel r
    | Response _ -> failwith "Response"
    | Batch_response _ -> failwith "Batch_response"
    | Batch_call _ -> failwith "Batch_call");

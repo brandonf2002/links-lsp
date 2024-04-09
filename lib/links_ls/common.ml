@@ -18,6 +18,12 @@ let write_message channel msg =
     (Response.yojson_of_t msg |> Yojson.Safe.to_string |> add_content_length_header)
 ;;
 
+let write_message_notif channel msg =
+  Channel.write_message
+    !channel
+    (Notification.yojson_of_t msg |> Yojson.Safe.to_string |> add_content_length_header)
+;;
+
 let get_error_response code message id =
   let error = Response.Error.make ~code ~message () in
   Response.error id error

@@ -1,4 +1,9 @@
 open Global
+open Links_lsp.Common
+open Common
+
+(* *)
+open Diagnostics
 
 type t =
   { uri : Lsp.Types.DocumentUri.t
@@ -24,48 +29,60 @@ let add_document doc =
   DocumentTable.add documents doc.uri doc
 ;;
 
-let update_document uri new_content new_version =
+let update_document ?(language_id = "links") uri new_content new_version =
+  clear_diagnostics uri;
   current_uri := Some uri;
   let parsed_ast =
-    try Some (Linxer.Phases.Parse.string (get_init_context ()) new_content) with
-    | _ -> None
+    try
+      let parsed_ast = Linxer.Phases.Parse.string (get_init_context ()) new_content in
+      Some parsed_ast
+    with
+    | error ->
+      add_diagnostic uri error;
+      None
   in
   let desugared_ast =
     try
       match parsed_ast with
-      | Some ast -> Some (Linxer.Phases.Desugar.run ast)
+      | Some a -> Some (Linxer.Phases.Desugar.run a)
       | _ -> None
     with
-    | _ -> None
+    | error ->
+      add_diagnostic uri error;
+      None
   in
-  (* TODO: This is horrible, it's just trying to keep some ASTs for
-     completion when the document is updated to an unparsable state *)
   match DocumentTable.find_opt documents uri with
   | Some doc ->
-    (match parsed_ast with
-     | Some _ ->
-       (match desugared_ast with
-        | Some _ ->
-          DocumentTable.replace
-            documents
-            uri
-            { doc with
-              content = new_content
-            ; version = new_version
-            ; parsed_ast
-            ; desugared_ast
-            }
-        | _ ->
-          DocumentTable.replace
-            documents
-            uri
-            { doc with content = new_content; version = new_version; parsed_ast })
-     | _ ->
+    (match parsed_ast, desugared_ast with
+     | Some _, Some _ ->
+       DocumentTable.replace
+         documents
+         uri
+         { doc with
+           content = new_content
+         ; version = new_version
+         ; parsed_ast
+         ; desugared_ast
+         }
+     | Some _, None ->
+       DocumentTable.replace
+         documents
+         uri
+         { doc with content = new_content; version = new_version; parsed_ast }
+     | _, _ ->
        DocumentTable.replace
          documents
          uri
          { doc with content = new_content; version = new_version })
-  | None -> failwith "Document not found"
+  | None ->
+    add_document
+      { uri
+      ; version = new_version
+      ; content = new_content
+      ; language_id
+      ; parsed_ast
+      ; desugared_ast
+      }
 ;;
 
 let remove_document uri = DocumentTable.remove documents uri
