@@ -53,7 +53,6 @@ let add_diagnostic uri error =
     | Some d -> d
     | None -> []
   in
-  log_to_file error_string;
   let error_string, line_number = extract_string_and_number error_string in
   let range =
     Lsp.Types.Range.create
@@ -65,20 +64,16 @@ let add_diagnostic uri error =
 ;;
 
 let get_diagnotics uri =
-  log_to_file "Hello testing 1";
-  ItemTable.iter (fun k v -> log_to_file (Printf.sprintf "Key: %s" k)) diagnostics;
-  log_to_file "Hello testing 2";
+  (* ItemTable.iter (fun k v -> log_to_file (Printf.sprintf "Key: %s" k)) diagnostics; *)
   match ItemTable.find_opt diagnostics (Lsp.Uri.to_string uri) with
   | Some d -> d
   | None -> []
 ;;
 
 let diagnostic_notification uri err channel =
-  log_to_file "Hello 1";
   let notif =
     Lsp.Types.PublishDiagnosticsParams.create ~diagnostics:(get_diagnotics uri) ~uri ()
   in
-  log_to_file "Hello 2";
   write_message_notif
     channel
     (Lsp.Server_notification.to_jsonrpc

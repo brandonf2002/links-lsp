@@ -178,18 +178,24 @@ let prepare_rename (p : Types.PrepareRenameParams.t) =
     | None -> ""
     | Some v -> v.content
   in
+  log_to_file content;
   let ast_foldr = new prepare_rename_traversal content in
-  let ast = Linxer.Phases.Parse.string (get_init_context ()) content in
-  log_to_file "Preparing to rename";
-  let _ = ast_foldr#program ast.program_ in
-  let r = ast_foldr#is_inside { line = p.position.line; col = p.position.character } in
-  match r with
-  | Some (s, f) ->
-    let start = Types.Position.create ~character:(s.col - 1) ~line:(s.line - 1) in
-    let finish = Types.Position.create ~character:(f.col - 1) ~line:(f.line - 1) in
-    let range = Types.Range.create ~end_:finish ~start in
-    Types.Range.yojson_of_t range
-  | None -> `Null
+  try
+    let ast = Linxer.Phases.Parse.string (get_init_context ()) content in
+    log_to_file "Preparing to rename";
+    let _ = ast_foldr#program ast.program_ in
+    let r = ast_foldr#is_inside { line = p.position.line; col = p.position.character } in
+    match r with
+    | Some (s, f) ->
+      let start = Types.Position.create ~character:(s.col - 1) ~line:(s.line - 1) in
+      let finish = Types.Position.create ~character:(f.col - 1) ~line:(f.line - 1) in
+      let range = Types.Range.create ~end_:finish ~start in
+      Types.Range.yojson_of_t range
+    | None -> `Null
+  with
+  | e ->
+    log_to_file (Printexc.to_string e);
+    `Null
 ;;
 
 (* let pos, s1, s2 = source_code#lookup (p.position.line, p.position.character) in *)
