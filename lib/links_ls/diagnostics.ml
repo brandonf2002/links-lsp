@@ -15,9 +15,25 @@ module ItemTable = Hashtbl.Make (struct
 let diagnostics = ItemTable.create 10
 let clear_diagnostics uri = ItemTable.remove diagnostics (Lsp.Uri.to_string uri)
 
+let nearest_of_chars str start chars =
+  let len = String.length str in
+  let positions =
+    List.filter_map
+      (fun c ->
+        try Some (String.index_from str start c) with
+        | Not_found -> None)
+      chars
+  in
+  let positions = List.filter (fun pos -> pos >= start) positions in
+  match positions with
+  | [] -> len (* If no characters are found, return the end of the string *)
+  | _ -> List.fold_left min len positions
+;;
+
 let extract_string_and_number (s : string) : string * int =
   let prefix1 = "<string>:" in
   let prefix2 = "***: Parse error: <string>:" in
+  log_to_file (Printf.sprintf "Extracting string and number from: %s" s);
   if String.starts_with ~prefix:prefix1 s
   then (
     let num_start = String.length prefix1 in
@@ -29,12 +45,14 @@ let extract_string_and_number (s : string) : string * int =
     modified_str, num)
   else if String.starts_with ~prefix:prefix2 s
   then (
+    log_to_file "Extracting string and number from prefix2";
     let modified_str =
       String.sub s (String.length prefix2) (String.length s - String.length prefix2)
     in
     let num_start = 0 in
-    let num_end = String.index_from modified_str num_start ' ' in
+    let num_end = nearest_of_chars modified_str num_start [ ' '; '\n' ] in
     let num_str = String.sub modified_str num_start (num_end - num_start) in
+    log_to_file (Printf.sprintf "num_str: %s" num_str);
     let num = int_of_string (String.trim num_str) in
     (* remove the number from the string *)
     let modified_str =
