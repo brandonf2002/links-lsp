@@ -106,6 +106,7 @@ let handle_request channel (r : Request.t) =
        (*         This will make it look cleaner and means we can return error from rename *)
        | E Shutdown -> Result.ok (shutdown ())
        | E (TextDocumentPrepareRename p) -> Result.ok (prepare_rename p)
+       | E (TextDocumentRename p) -> Result.ok (rename p)
        | E (TextDocumentCompletion p) -> Result.ok (complation p)
        | _ -> Result.error (default_fail_response ~error:"Hello world!" ()))
   in

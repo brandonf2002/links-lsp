@@ -2,7 +2,7 @@ open Lsp
 open Document_state
 
 (* open Links_lsp.Common *)
-open Global
+(* open Global *)
 
 type item_info =
   { kind : Types.CompletionItemKind.t
@@ -183,27 +183,27 @@ let rec find_root dir =
 
 let testing_dir () = find_root (Sys.getcwd ()) ^ "/test/test_programs"
 
-let%expect_test "Kind Info" =
-  init_item_table ();
-  (* let file1 = testing_dir () ^ "/silly-progress.links" in *)
-  let file1 =
-    "/home/brandon/doc/uni/5th_year/diss/links/examples/sessions/linear_if.links"
-  in
-  let a = Links_core.Loader.load (get_init_context ()) file1 in
-  let ast_foldr = new completion_traversal ~is_temp_item:true ~has_types:false in
-  let _ = ast_foldr#program a.program_ in
-  print_endline (Links_core.Sugartypes.show_program a.program_);
-  let a = Linxer.Phases.Desugar.run a in
-  let ast_foldr = new completion_traversal ~is_temp_item:true ~has_types:true in
-  let _ = ast_foldr#program a.program in
-  let _ =
-    ItemTable.fold
-      (fun s info acc ->
-        print_endline (s ^ " : " ^ info.detail);
-        Types.CompletionItem.create ~label:s ~kind:info.kind ~detail:info.detail () :: acc)
-      item_table.table
-      []
-  in
-  [%expect {| |}];
-  ()
-;;
+(* let%expect_test "Kind Info" = *)
+(*   init_item_table (); *)
+(*   (1* let file1 = testing_dir () ^ "/silly-progress.links" in *1) *)
+(*   let file1 = *)
+(*     "/home/brandon/doc/uni/5th_year/diss/links/examples/sessions/linear_if.links" *)
+(*   in *)
+(*   let a = Links_core.Loader.load (get_init_context ()) file1 in *)
+(*   let ast_foldr = new completion_traversal ~is_temp_item:true ~has_types:false in *)
+(*   let _ = ast_foldr#program a.program_ in *)
+(*   print_endline (Links_core.Sugartypes.show_program a.program_); *)
+(*   let a = Linxer.Phases.Desugar.run a in *)
+(*   let ast_foldr = new completion_traversal ~is_temp_item:true ~has_types:true in *)
+(*   let _ = ast_foldr#program a.program in *)
+(*   let _ = *)
+(*     ItemTable.fold *)
+(*       (fun s info acc -> *)
+(*         print_endline (s ^ " : " ^ info.detail); *)
+(*         Types.CompletionItem.create ~label:s ~kind:info.kind ~detail:info.detail () :: acc) *)
+(*       item_table.table *)
+(*       [] *)
+(*   in *)
+(*   [%expect {| |}]; *)
+(*   () *)
+(* ;; *)

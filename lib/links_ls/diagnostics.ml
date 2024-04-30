@@ -1,9 +1,50 @@
 (* TEMP
    TODO: Move to separate file *)
+open Lexing
+open Links_lsp.Common
+open Links_core.Utility
+open Links_core.SourceCode
+
+let pos_prefix ?pos line =
+  let prefix =
+    match pos with
+    | Some pos -> Printf.sprintf "%s:%d" pos.pos_fname pos.pos_lnum
+    | None -> "***"
+  in
+  Printf.sprintf "%s: %s " prefix line
+;;
+
+let prefix_lines prefix s =
+  prefix ^ Str.global_replace (Str.regexp "\n") ("\n" ^ prefix) s
+;;
+
+let format_exception = function
+  | Links_core.Errors.RichSyntaxError s ->
+    pos_prefix
+      ("Parse error: "
+       ^ s.filename
+       ^ ":"
+       ^ s.linespec
+       ^ "\n"
+       ^ s.message
+       ^ "\n"
+       ^ prefix_lines "  " s.linetext
+       ^ "\n"
+       ^ "   "
+       ^ s.marker)
+  | Links_core.Errors.Type_error (pos, s) ->
+    let pos, expr = Position.resolve_start_expr pos in
+    pos_prefix ~pos (Printf.sprintf "Type error: %s\nIn expression: %s.\n" s expr)
+  (* | Links_core.Errors.ModuleError (s, pos) -> *)
+  (*   pos_prefix ~pos (Printf.sprintf "Module error: %s\n" s) *)
+  | e ->
+    log_to_file ("Wrong error: " ^ Links_core.Errors.format_exception e);
+    failwith ""
+;;
+
 (* END TEMP *)
 
 open Common
-open Links_lsp.Common
 
 module ItemTable = Hashtbl.Make (struct
     type t = String.t
@@ -64,6 +105,11 @@ let extract_string_and_number (s : string) : string * int =
 ;;
 
 let add_diagnostic uri error =
+  (* log_to_file "TESTING ADD DIAGNOSTIC"; *)
+  (* log_to_file (format_exception error); *)
+  (* log_to_file "Hello"; *)
+  (* log_to_file (Links_core.Errors.format_exception error); *)
+  (* log_to_file "TESTING ADD DIAGNOSTIC"; *)
   let error_string = Links_core.Errors.format_exception error in
   let uri_string = Lsp.Uri.to_string uri in
   let d_list =
@@ -88,7 +134,7 @@ let get_diagnotics uri =
   | None -> []
 ;;
 
-let diagnostic_notification uri err channel =
+let diagnostic_notification uri _err channel =
   let notif =
     Lsp.Types.PublishDiagnosticsParams.create ~diagnostics:(get_diagnotics uri) ~uri ()
   in
