@@ -1,8 +1,69 @@
 open Lsp
 open Document_state
+open Links_core.SourceCode
+open Links_lsp.Common
 
 (* open Links_lsp.Common *)
 (* open Global *)
+
+type position =
+  { line : int
+  ; col : int
+  }
+
+let string_of_position p = "(" ^ string_of_int p.line ^ ", " ^ string_of_int p.col ^ ")"
+
+type range =
+  | Before
+  | After
+  | Inside
+
+(* TODO: optimise this to end after we have went past the pos *)
+let is_within_range start_pos end_pos pos =
+  let is_after_start =
+    pos.line > start_pos.line || (pos.line = start_pos.line && pos.col >= start_pos.col)
+  in
+  let is_before_end =
+    pos.line < end_pos.line || (pos.line = end_pos.line && pos.col <= end_pos.col - 1)
+  in
+  match is_after_start, is_before_end with
+  | true, true -> Inside
+  | true, false -> Before
+  | false, true -> After
+  | false, false -> Before
+;;
+
+let calc_pos ?(debug_info = "") str pos known_line =
+  let len = String.length str in
+  if pos < 0 || pos >= len
+  then invalid_arg ("Position out of bounds: " ^ debug_info ^ " " ^ string_of_int pos);
+  let rec find_line_start i line =
+    if i >= len || line = known_line
+    then i
+    else if str.[i] = '\n'
+    then find_line_start (i + 1) (line + 1)
+    else find_line_start i (line + 1)
+  in
+  let start_index = find_line_start 0 1 in
+  (* Now find the column number from the start_index *)
+  let rec aux i col =
+    if i = pos
+    then { line = known_line; col }
+    else if i >= len
+    then { line = known_line; col } (* In case position is at the end *)
+    else (
+      let next_col = if str.[i] = '\n' then 1 else col + 1 in
+      aux (i + 1) next_col)
+  in
+  aux start_index 1
+;;
+
+let get_real_position ?(name = "") pos content =
+  let start = Position.start pos in
+  let finish = Position.finish pos in
+  ( calc_pos ~debug_info:name content start.pos_cnum start.pos_lnum
+  , calc_pos ~debug_info:name content finish.pos_cnum finish.pos_lnum )
+;;
 
 type item_info =
   { kind : Types.CompletionItemKind.t
@@ -82,6 +143,65 @@ class completion_traversal ~is_temp_item ~has_types =
     method! phrasenode p = super#phrasenode p
   end
 
+class completion_traversal_content ~is_temp_item ~has_types ~content ~position =
+  object (self : 'self_type)
+    inherit Links_core.SugarTraversals.fold as super
+
+    (* method printer = log_to_file *)
+    method printer = print_endline
+
+    method add_item ?kind ?detail name =
+      (* if not (item_position == After) *)
+      (* then ( *)
+      match has_types with
+      | true ->
+        if Hashtbl.mem untyped_tbl name then add_item ?kind ?detail name ~is_temp_item
+      | false -> Hashtbl.add untyped_tbl name ()
+    (* else log_to_file "WOWO" *)
+
+    method! binding b =
+      let open Links_core.Sugartypes in
+      (match b.node with
+       | Fun f ->
+         if not has_types then (
+           let start, finish = get_real_position f.fun_binder.pos content in
+           if not ((is_within_range start finish position) == After) then
+             (self#add_item
+               ~kind:Types.CompletionItemKind.Function
+               ~detail:(Links_core.Types.string_of_datatype (Binder.to_type f.fun_binder))
+               (Binder.to_name f.fun_binder))) else 
+          (self#add_item
+           ~kind:Types.CompletionItemKind.Function
+           ~detail:(Links_core.Types.string_of_datatype (Binder.to_type f.fun_binder))
+           (Binder.to_name f.fun_binder))
+       | _ -> ());
+      super#binding b
+
+    method! pattern p =
+      let open Links_core.Sugartypes in
+      (match p.node with
+       | Variable v ->
+         if not has_types then (
+           let start, finish = get_real_position p.pos content in
+           if not ((is_within_range start finish position) == After) then
+             (self#add_item
+               ~kind:Types.CompletionItemKind.Variable
+               ~detail:(Links_core.Types.string_of_datatype (Binder.to_type v))
+               (Binder.to_name v))) else
+            (self#add_item
+             ~kind:Types.CompletionItemKind.Variable
+             ~detail:(Links_core.Types.string_of_datatype (Binder.to_type v))
+             (Binder.to_name v))
+
+       | _ -> ());
+      super#pattern p
+
+    method! program p = super#program p
+    method! name n = super#name n
+    method! binder n = super#binder n
+    method! phrasenode p = super#phrasenode p
+  end
+
 let get_lib_functions () =
   let types =
     Links_core.Env.String.fold
@@ -143,18 +263,24 @@ let init_item_table () =
 
 let complation (r : Types.CompletionParams.t) =
   let doc = get_document r.textDocument.uri in
+  let position = { line = r.position.line; col = r.position.character } in
   let parsed_ast, desugared_ast =
     match doc with
     | None -> None, None
     | Some v -> v.parsed_ast, v.desugared_ast
   in
+  let content =
+    match doc with
+    | None -> ""
+    | Some v -> v.content
+  in
   match parsed_ast, desugared_ast with
   | None, _ -> `Null
   | _, None -> `Null
   | Some a, Some b ->
-    let ast_foldr = new completion_traversal ~is_temp_item:true ~has_types:false in
+    let ast_foldr = new completion_traversal_content ~is_temp_item:true ~has_types:false ~position ~content in
     let _ = ast_foldr#program a.program_ in
-    let ast_foldr = new completion_traversal ~is_temp_item:true ~has_types:true in
+    let ast_foldr = new completion_traversal_content ~is_temp_item:true ~has_types:true ~position ~content in
     let _ = ast_foldr#program b.program in
     let item_list =
       ItemTable.fold
