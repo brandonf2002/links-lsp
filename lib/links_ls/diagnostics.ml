@@ -5,6 +5,43 @@ open Links_lsp.Common
 open Links_core.Utility
 open Links_core.SourceCode
 
+type position =
+  { line : int
+  ; col : int
+  }
+
+let calc_pos ?(debug_info = "") str pos known_line =
+  let len = String.length str in
+  if pos < 0 || pos >= len
+  then invalid_arg ("Position out of bounds: " ^ debug_info ^ " " ^ string_of_int pos);
+  let rec find_line_start i line =
+    if i >= len || line = known_line
+    then i
+    else if str.[i] = '\n'
+    then find_line_start (i + 1) (line + 1)
+    else find_line_start i (line + 1)
+  in
+  let start_index = find_line_start 0 1 in
+  (* Now find the column number from the start_index *)
+  let rec aux i col =
+    if i = pos
+    then { line = known_line; col }
+    else if i >= len
+    then { line = known_line; col } (* In case position is at the end *)
+    else (
+      let next_col = if str.[i] = '\n' then 1 else col + 1 in
+      aux (i + 1) next_col)
+  in
+  aux start_index 1
+;;
+
+let get_real_position ?(name = "") pos content =
+  let start = Position.start pos in
+  let finish = Position.finish pos in
+  ( calc_pos ~debug_info:name content start.pos_cnum start.pos_lnum
+  , calc_pos ~debug_info:name content finish.pos_cnum finish.pos_lnum )
+;;
+
 let pos_prefix ?pos line =
   let prefix =
     match pos with
@@ -18,28 +55,60 @@ let prefix_lines prefix s =
   prefix ^ Str.global_replace (Str.regexp "\n") ("\n" ^ prefix) s
 ;;
 
+type synerrspec =
+  { filename : string
+  ; linespec : string
+  ; message : string
+  ; linetext : string
+  ; marker : string
+  }
+
+let extract_column_from_marker marker =
+  let len = String.length marker in
+  let rec aux i = if i = len || marker.[i] = '^' then i else aux (i + 1) in
+  aux 0
+;;
+
 let format_exception = function
   | Links_core.Errors.RichSyntaxError s ->
-    pos_prefix
-      ("Parse error: "
-       ^ s.filename
-       ^ ":"
-       ^ s.linespec
-       ^ "\n"
-       ^ s.message
-       ^ "\n"
-       ^ prefix_lines "  " s.linetext
-       ^ "\n"
-       ^ "   "
-       ^ s.marker)
+    log_to_file (Printf.sprintf "RichSyntaxError: %s\n" s.filename);
+    log_to_file (Printf.sprintf "RichSyntaxError: %s\n" s.linespec);
+    log_to_file (Printf.sprintf "RichSyntaxError: %s\n" s.message);
+    log_to_file (Printf.sprintf "RichSyntaxError: %s\n" s.linetext);
+    log_to_file (Printf.sprintf "RichSyntaxError: %s\n" s.marker);
+    let col = extract_column_from_marker s.marker in
+    Printf.sprintf
+      "%d,%d,%d,%d,Parse error: %s"
+      (int_of_string s.linespec)
+      col
+      (int_of_string s.linespec)
+      (col + 5)
+      s.message
   | Links_core.Errors.Type_error (pos, s) ->
-    let pos, expr = Position.resolve_start_expr pos in
-    pos_prefix ~pos (Printf.sprintf "Type error: %s\nIn expression: %s.\n" s expr)
-  (* | Links_core.Errors.ModuleError (s, pos) -> *)
-  (*   pos_prefix ~pos (Printf.sprintf "Module error: %s\n" s) *)
+    let _, expr = Position.resolve_start_expr pos in
+    Printf.sprintf
+      "%d,%d,%d,%d,Type error: %s\nIn expression: %s"
+      (Position.start pos).pos_lnum
+      (Position.start pos).pos_cnum
+      (Position.finish pos).pos_lnum
+      (Position.finish pos).pos_cnum
+      s
+      expr
+  | Links_core.Errors.ModuleError (s, pos) ->
+    let message = Printf.sprintf "Module Error: %s" s in
+    (match pos with
+     | None -> Printf.sprintf "%d,%d,%d,%d,%s" 0 0 1 0 message
+     | Some pos ->
+       Printf.sprintf
+         "%d,%d,%d,%d,%s"
+         (Position.start pos).pos_lnum
+         (Position.start pos).pos_cnum
+         (Position.finish pos).pos_lnum
+         (Position.finish pos).pos_cnum
+         message)
   | e ->
     log_to_file ("Wrong error: " ^ Links_core.Errors.format_exception e);
-    failwith ""
+    Links_core.Errors.format_exception e
 ;;
 
 (* END TEMP *)
@@ -104,31 +173,37 @@ let extract_string_and_number (s : string) : string * int =
   else s, 0
 ;;
 
+let parse_format (input : string) : int * int * int * int * string =
+  match String.split_on_char ',' input with
+  | [ line1; col1; line2; col2; message ] ->
+    let line1 = int_of_string line1 in
+    let col1 = int_of_string col1 in
+    let line2 = int_of_string line2 in
+    let col2 = int_of_string col2 in
+    let message = String.sub message 0 (String.length message) in
+    line1, col1, line2, col2, message
+  | _ -> failwith "Invalid input format"
+;;
+
 let add_diagnostic uri error =
-  (* log_to_file "TESTING ADD DIAGNOSTIC"; *)
-  (* log_to_file (format_exception error); *)
-  (* log_to_file "Hello"; *)
-  (* log_to_file (Links_core.Errors.format_exception error); *)
-  (* log_to_file "TESTING ADD DIAGNOSTIC"; *)
-  let error_string = Links_core.Errors.format_exception error in
+  let error_string = format_exception error in
   let uri_string = Lsp.Uri.to_string uri in
   let d_list =
     match ItemTable.find_opt diagnostics uri_string with
     | Some d -> d
     | None -> []
   in
-  let error_string, line_number = extract_string_and_number error_string in
+  let line1, col1, line2, col2, message = parse_format error_string in
   let range =
     Lsp.Types.Range.create
-      ~start:(Lsp.Types.Position.create ~line:(line_number - 1) ~character:0)
-      ~end_:(Lsp.Types.Position.create ~line:(line_number - 1) ~character:3)
+      ~start:(Lsp.Types.Position.create ~line:(line1 - 1) ~character:(col1 - 1))
+      ~end_:(Lsp.Types.Position.create ~line:(line2 - 1) ~character:(col2 - 1))
   in
-  let new_d = Lsp.Types.Diagnostic.create ~message:error_string ~range () in
+  let new_d = Lsp.Types.Diagnostic.create ~message ~range () in
   ItemTable.replace diagnostics uri_string (new_d :: d_list)
 ;;
 
 let get_diagnotics uri =
-  (* ItemTable.iter (fun k v -> log_to_file (Printf.sprintf "Key: %s" k)) diagnostics; *)
   match ItemTable.find_opt diagnostics (Lsp.Uri.to_string uri) with
   | Some d -> d
   | None -> []

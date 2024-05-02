@@ -78,7 +78,9 @@ let handle_notification channel (n : Notification.t) =
   | Ok p ->
     (match n.method_ with
      | "exit" -> exit 0
-     | "textDocument/didOpen" -> did_open p
+     | "textDocument/didOpen" ->
+       let uri = did_open p in
+       diagnostic_notification uri "hello" channel
      | "textDocument/didChange" ->
        let uri = did_change p in
        diagnostic_notification uri "hello" channel
