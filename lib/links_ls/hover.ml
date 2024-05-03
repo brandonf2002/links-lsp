@@ -146,6 +146,8 @@ class completion_traversal ~is_temp_item ~has_types =
 class completion_traversal_content ~is_temp_item ~has_types ~content ~position =
   object (self : 'self_type)
     inherit Links_core.SugarTraversals.fold as super
+    val mutable retrun_value = ""
+    method get_return_value = retrun_value
 
     (* method printer = log_to_file *)
     method printer = print_endline
@@ -163,20 +165,13 @@ class completion_traversal_content ~is_temp_item ~has_types ~content ~position =
       let open Links_core.Sugartypes in
       (match b.node with
        | Fun f ->
-         if not has_types
+         if has_types
          then (
            let start, finish = get_real_position f.fun_binder.pos content in
-           if not (is_within_range start finish position == After)
+           if is_within_range start finish position == Inside
            then
-             self#add_item
-               ~kind:Types.CompletionItemKind.Function
-               ~detail:(Links_core.Types.string_of_datatype (Binder.to_type f.fun_binder))
-               (Binder.to_name f.fun_binder))
-         else
-           self#add_item
-             ~kind:Types.CompletionItemKind.Function
-             ~detail:(Links_core.Types.string_of_datatype (Binder.to_type f.fun_binder))
-             (Binder.to_name f.fun_binder)
+             retrun_value
+             <- Links_core.Types.string_of_datatype (Binder.to_type f.fun_binder))
        | _ -> ());
       super#binding b
 
@@ -184,20 +179,11 @@ class completion_traversal_content ~is_temp_item ~has_types ~content ~position =
       let open Links_core.Sugartypes in
       (match p.node with
        | Variable v ->
-         if not has_types
+         if has_types
          then (
            let start, finish = get_real_position p.pos content in
-           if not (is_within_range start finish position == After)
-           then
-             self#add_item
-               ~kind:Types.CompletionItemKind.Variable
-               ~detail:(Links_core.Types.string_of_datatype (Binder.to_type v))
-               (Binder.to_name v))
-         else
-           self#add_item
-             ~kind:Types.CompletionItemKind.Variable
-             ~detail:(Links_core.Types.string_of_datatype (Binder.to_type v))
-             (Binder.to_name v)
+           if is_within_range start finish position == Inside
+           then retrun_value <- Links_core.Types.string_of_datatype (Binder.to_type v))
        | _ -> ());
       super#pattern p
 
@@ -266,7 +252,7 @@ let init_item_table () =
     Links_core.Lexer.keywords
 ;;
 
-let complation (r : Types.CompletionParams.t) =
+let hover (r : Types.HoverParams.t) =
   let doc = get_document r.textDocument.uri in
   let position = { line = r.position.line; col = r.position.character } in
   let parsed_ast, desugared_ast =
@@ -280,28 +266,8 @@ let complation (r : Types.CompletionParams.t) =
     | Some v -> v.content
   in
   match parsed_ast, desugared_ast with
-  | None, _ ->
-    let item_list =
-      ItemTable.fold
-        (fun s info acc ->
-          Types.CompletionItem.create ~label:s ~kind:info.kind ~detail:info.detail ()
-          :: acc)
-        item_table.table
-        []
-    in
-    let ret = Types.CompletionList.create ~isIncomplete:false ~items:item_list () in
-    Types.CompletionList.yojson_of_t ret
-  | _, None ->
-    let item_list =
-      ItemTable.fold
-        (fun s info acc ->
-          Types.CompletionItem.create ~label:s ~kind:info.kind ~detail:info.detail ()
-          :: acc)
-        item_table.table
-        []
-    in
-    let ret = Types.CompletionList.create ~isIncomplete:false ~items:item_list () in
-    Types.CompletionList.yojson_of_t ret
+  | None, _ -> `Null
+  | _, None -> `Null
   | Some a, Some b ->
     let ast_foldr =
       new completion_traversal_content
@@ -318,19 +284,22 @@ let complation (r : Types.CompletionParams.t) =
         ~position
         ~content
     in
+    log_to_file "Hover Request";
     let _ = ast_foldr#program b.program in
-    let item_list =
-      ItemTable.fold
-        (fun s info acc ->
-          Types.CompletionItem.create ~label:s ~kind:info.kind ~detail:info.detail ()
-          :: acc)
-        item_table.table
-        []
-    in
+    log_to_file "Hover Request";
+    let ret_value = ast_foldr#get_return_value in
+    log_to_file "Hover Request";
+    "Ret Value: " ^ ret_value |> log_to_file;
+    log_to_file "Hover Request";
     remove_temp_items ();
+    log_to_file "Hover Request";
     Hashtbl.clear untyped_tbl;
-    let ret = Types.CompletionList.create ~isIncomplete:false ~items:item_list () in
-    Types.CompletionList.yojson_of_t ret
+    log_to_file "Hover Request";
+    let (contents : Types.MarkedString.t) = { value = ret_value; language = None } in
+    log_to_file "Hover Request";
+    let ret = Types.Hover.create ~contents:(`MarkedString contents) () in
+    log_to_file "Hover Request";
+    Types.Hover.yojson_of_t ret
 ;;
 
 (* TESTS *)

@@ -11,7 +11,8 @@ let did_open (p : Client_notification.t) =
       ~language_id:p.textDocument.languageId
       p.textDocument.uri
       p.textDocument.text
-      p.textDocument.version
+      p.textDocument.version;
+    p.textDocument.uri
   | _ -> failwith "Unreachable"
 ;;
 
