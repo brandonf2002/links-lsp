@@ -71,19 +71,15 @@ let extract_column_from_marker marker =
 
 let format_exception = function
   | Links_core.Errors.RichSyntaxError s ->
-    log_to_file (Printf.sprintf "RichSyntaxError: %s\n" s.filename);
-    log_to_file (Printf.sprintf "RichSyntaxError: %s\n" s.linespec);
-    log_to_file (Printf.sprintf "RichSyntaxError: %s\n" s.message);
-    log_to_file (Printf.sprintf "RichSyntaxError: %s\n" s.linetext);
-    log_to_file (Printf.sprintf "RichSyntaxError: %s\n" s.marker);
     let col = extract_column_from_marker s.marker in
     Printf.sprintf
-      "%d,%d,%d,%d,Parse error: %s"
+      "%d,%d,%d,%d,Parse error: %s %s"
       (int_of_string s.linespec)
       col
       (int_of_string s.linespec)
-      (col + 5)
+      (col + 10)
       s.message
+      s.linetext
   | Links_core.Errors.Type_error (pos, s) ->
     let _, expr = Position.resolve_start_expr pos in
     Printf.sprintf
@@ -174,33 +170,44 @@ let extract_string_and_number (s : string) : string * int =
 ;;
 
 let parse_format (input : string) : int * int * int * int * string =
-  match String.split_on_char ',' input with
-  | [ line1; col1; line2; col2; message ] ->
+  let parts = String.split_on_char ',' input in
+  match parts with
+  | line1 :: col1 :: line2 :: col2 :: message_parts ->
     let line1 = int_of_string line1 in
     let col1 = int_of_string col1 in
     let line2 = int_of_string line2 in
     let col2 = int_of_string col2 in
-    let message = String.sub message 0 (String.length message) in
+    let message = String.concat "," message_parts in
     line1, col1, line2, col2, message
   | _ -> failwith "Invalid input format"
 ;;
 
 let add_diagnostic uri error =
+  Links_core.Errors.format_exception error |> log_to_file;
+  log_to_file "Hello1";
   let error_string = format_exception error in
+  log_to_file "Hello2";
   let uri_string = Lsp.Uri.to_string uri in
   let d_list =
     match ItemTable.find_opt diagnostics uri_string with
     | Some d -> d
     | None -> []
   in
-  let line1, col1, line2, col2, message = parse_format error_string in
-  let range =
-    Lsp.Types.Range.create
-      ~start:(Lsp.Types.Position.create ~line:(line1 - 1) ~character:(col1 - 1))
-      ~end_:(Lsp.Types.Position.create ~line:(line2 - 1) ~character:(col2 - 1))
-  in
-  let new_d = Lsp.Types.Diagnostic.create ~message ~range () in
-  ItemTable.replace diagnostics uri_string (new_d :: d_list)
+  log_to_file "Hello3";
+  match error with
+  | Links_core.Errors.RichSyntaxError _
+  | Links_core.Errors.Type_error _
+  | Links_core.Errors.ModuleError _ ->
+    let line1, col1, line2, col2, message = parse_format error_string in
+    log_to_file "Hello4";
+    let range =
+      Lsp.Types.Range.create
+        ~start:(Lsp.Types.Position.create ~line:(line1 - 1) ~character:(col1 - 1))
+        ~end_:(Lsp.Types.Position.create ~line:(line2 - 1) ~character:(col2 - 1))
+    in
+    let new_d = Lsp.Types.Diagnostic.create ~message ~range () in
+    ItemTable.replace diagnostics uri_string (new_d :: d_list)
+  | _ -> ()
 ;;
 
 let get_diagnotics uri =

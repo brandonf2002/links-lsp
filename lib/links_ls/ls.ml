@@ -15,6 +15,7 @@ let server_not_initialzed ?(id = `Int 0) () =
 let do_initialize channel (r : Request.t) =
   let open Lsp.Types in
   let open Jsonrpc2.Jsonrpc in
+  let open Lsp.Import in
   let serverInfo =
     InitializeResult.create_serverInfo ~name:"links-lsp" ~version:"0.1" ()
   in
@@ -32,8 +33,18 @@ let do_initialize channel (r : Request.t) =
     CompletionOptions.create ~triggerCharacters:[ "." ] ~resolveProvider:false ()
   in
   let renameProvider = `RenameOptions (RenameOptions.create ~prepareProvider:true ()) in
+  (* let semanticTokensProvider = *)
+  (*   let full = `Full (SemanticTokensOptions.create_full ~delta:false ()) in *)
+  (*   `SemanticTokensOptions *)
+  (*     (SemanticTokensOptions.create ~legend:Highlighting.legend ~full ()) *)
+  (* in *)
   let capabilities =
-    ServerCapabilities.create ~textDocumentSync ~renameProvider ~completionProvider ()
+    ServerCapabilities.create
+      ~textDocumentSync
+      ~renameProvider
+      ~completionProvider
+      (* ~semanticTokensProvider *)
+      ()
   in
   let init_result = InitializeResult.create ~capabilities ~serverInfo () in
   let msg = Response.ok r.id (InitializeResult.yojson_of_t init_result) in
@@ -110,6 +121,7 @@ let handle_request channel (r : Request.t) =
        | E (TextDocumentPrepareRename p) -> Result.ok (prepare_rename p)
        | E (TextDocumentRename p) -> Result.ok (rename p)
        | E (TextDocumentCompletion p) -> Result.ok (complation p)
+       (* | E (TextDocumentHover p) -> Result.ok (Hover.hover p) *)
        | _ -> Result.error (default_fail_response ~error:"Hello world!" ()))
   in
   write_message channel { id = r.id; result }
