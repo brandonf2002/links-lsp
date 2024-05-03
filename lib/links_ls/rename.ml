@@ -193,9 +193,7 @@ let prepare_rename (p : Types.PrepareRenameParams.t) =
       Types.Range.yojson_of_t range
     | None -> `Null
   with
-  | e ->
-    log_to_file (Printexc.to_string e);
-    `Null
+  | e -> `Null
 ;;
 
 module BindingMap = Hashtbl.Make (struct
@@ -429,11 +427,8 @@ let rename (p : Types.RenameParams.t) =
   let ast_foldr = new rename_traversal content in
   try
     let ast = Linxer.Phases.Parse.string (get_init_context ()) content in
-    log_to_file "Renaming";
     let _ = ast_foldr#program ast.program_ in
     let return_positions = ast_foldr#get_return_positions () in
-    "Return Positions size is: " ^ string_of_int (List.length return_positions)
-    |> log_to_file;
     let change_list =
       find_list
         { line = p.position.line + 1; col = p.position.character + 1 }
@@ -462,9 +457,7 @@ let rename (p : Types.RenameParams.t) =
       Types.WorkspaceEdit.yojson_of_t workspacec_edit
     | None -> `Null
   with
-  | e ->
-    log_to_file (Printexc.to_string e);
-    `Null
+  | e -> `Null
 ;;
 
 (* let pos, s1, s2 = source_code#lookup (p.position.line, p.position.character) in *)

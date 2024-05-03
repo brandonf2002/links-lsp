@@ -97,10 +97,10 @@ let handle_notification channel (n : Notification.t) =
        diagnostic_notification uri "hello" channel
      | "textDocument/didClose" -> did_close p
      | _ ->
-       prerr_endline "Not imlemented yet (Notif)";
-       log_to_file ("Not implimented: " ^ n.method_))
+       prerr_endline "Not imlemented yet (Notif)"
+       (* log_to_file ("Not implimented: " ^ n.method_)) *))
   | Error e ->
-    "Error: " ^ e |> log_to_file;
+    (* "Error: " ^ e |> log_to_file; *)
     ()
 ;;
 
