@@ -103,7 +103,7 @@ let format_exception = function
          (Position.finish pos).pos_cnum
          message)
   | e ->
-    log_to_file ("Wrong error: " ^ Links_core.Errors.format_exception e);
+    (* log_to_file ("Wrong error: " ^ Links_core.Errors.format_exception e); *)
     Links_core.Errors.format_exception e
 ;;
 
@@ -139,7 +139,7 @@ let nearest_of_chars str start chars =
 let extract_string_and_number (s : string) : string * int =
   let prefix1 = "<string>:" in
   let prefix2 = "***: Parse error: <string>:" in
-  log_to_file (Printf.sprintf "Extracting string and number from: %s" s);
+  (* log_to_file (Printf.sprintf "Extracting string and number from: %s" s); *)
   if String.starts_with ~prefix:prefix1 s
   then (
     let num_start = String.length prefix1 in
@@ -151,14 +151,14 @@ let extract_string_and_number (s : string) : string * int =
     modified_str, num)
   else if String.starts_with ~prefix:prefix2 s
   then (
-    log_to_file "Extracting string and number from prefix2";
+    (* log_to_file "Extracting string and number from prefix2"; *)
     let modified_str =
       String.sub s (String.length prefix2) (String.length s - String.length prefix2)
     in
     let num_start = 0 in
     let num_end = nearest_of_chars modified_str num_start [ ' '; '\n' ] in
     let num_str = String.sub modified_str num_start (num_end - num_start) in
-    log_to_file (Printf.sprintf "num_str: %s" num_str);
+    (* log_to_file (Printf.sprintf "num_str: %s" num_str); *)
     let num = int_of_string (String.trim num_str) in
     (* remove the number from the string *)
     let modified_str =
@@ -183,23 +183,19 @@ let parse_format (input : string) : int * int * int * int * string =
 ;;
 
 let add_diagnostic uri error =
-  Links_core.Errors.format_exception error |> log_to_file;
-  log_to_file "Hello1";
+  (* Links_core.Errors.format_exception error |> log_to_file; *)
   let error_string = format_exception error in
-  log_to_file "Hello2";
   let uri_string = Lsp.Uri.to_string uri in
   let d_list =
     match ItemTable.find_opt diagnostics uri_string with
     | Some d -> d
     | None -> []
   in
-  log_to_file "Hello3";
   match error with
   | Links_core.Errors.RichSyntaxError _
   | Links_core.Errors.Type_error _
   | Links_core.Errors.ModuleError _ ->
     let line1, col1, line2, col2, message = parse_format error_string in
-    log_to_file "Hello4";
     let range =
       Lsp.Types.Range.create
         ~start:(Lsp.Types.Position.create ~line:(line1 - 1) ~character:(col1 - 1))
