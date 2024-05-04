@@ -123,6 +123,15 @@ class completion_traversal ~is_temp_item ~has_types =
            (Binder.to_name f.fun_binder)
            ~kind:Types.CompletionItemKind.Function
            ~detail:(Links_core.Types.string_of_datatype (Binder.to_type f.fun_binder))
+       | Funs f ->
+         (match f with
+          | x :: _ ->
+            self#add_item
+              (Binder.to_name x.node.rec_binder)
+              ~kind:Types.CompletionItemKind.Function
+              ~detail:
+                (Links_core.Types.string_of_datatype (Binder.to_type x.node.rec_binder))
+          | _ -> ())
        | _ -> ());
       super#binding b
 
@@ -177,6 +186,27 @@ class completion_traversal_content ~is_temp_item ~has_types ~content ~position =
              ~kind:Types.CompletionItemKind.Function
              ~detail:(Links_core.Types.string_of_datatype (Binder.to_type f.fun_binder))
              (Binder.to_name f.fun_binder)
+       | Funs f ->
+         (match f with
+          | x :: _ ->
+            if not has_types
+            then (
+              let start, finish = get_real_position x.node.rec_binder.pos content in
+              if not (is_within_range start finish position == After)
+              then
+                self#add_item
+                  ~kind:Types.CompletionItemKind.Function
+                  ~detail:
+                    (Links_core.Types.string_of_datatype
+                       (Binder.to_type x.node.rec_binder))
+                  (Binder.to_name x.node.rec_binder))
+            else
+              self#add_item
+                ~kind:Types.CompletionItemKind.Function
+                ~detail:
+                  (Links_core.Types.string_of_datatype (Binder.to_type x.node.rec_binder))
+                (Binder.to_name x.node.rec_binder)
+          | _ -> ())
        | _ -> ());
       super#binding b
 
